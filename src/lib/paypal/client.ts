@@ -235,7 +235,8 @@ export class PayPalClient {
   // --- Invoicing v2 -------------------------------------------------------------------
 
   generateInvoiceNumber() {
-    return this.request<{ invoice_number: string }>("POST", "/v2/invoicing/generate-next-invoice-number");
+    // Without a JSON body the sandbox answers 415 UNSUPPORTED_MEDIA_TYPE.
+    return this.request<{ invoice_number: string }>("POST", "/v2/invoicing/generate-next-invoice-number", { body: {} });
   }
   createInvoice(body: T.CreateInvoiceRequest, opts: RequestOptions = {}) {
     return this.request<T.Invoice>("POST", "/v2/invoicing/invoices", { ...opts, body });
@@ -247,8 +248,9 @@ export class PayPalClient {
       { ...opts, body },
     );
   }
+  /** The sandbox answers 200 with `{ id }` (the docs say 204 with no body); both are success. */
   remindInvoice(id: string, body: T.InvoiceNotification, opts: RequestOptions = {}) {
-    return this.request<null>("POST", `/v2/invoicing/invoices/${encodeURIComponent(id)}/remind`, { ...opts, body });
+    return this.request<{ id?: string } | null>("POST", `/v2/invoicing/invoices/${encodeURIComponent(id)}/remind`, { ...opts, body });
   }
   recordInvoicePayment(id: string, body: T.RecordPaymentRequest, opts: RequestOptions = {}) {
     return this.request<{ payment_id: string }>(
@@ -280,6 +282,7 @@ export class PayPalClient {
       },
     });
   }
+  /** 404 NOT_FOUND on sandbox accounts where the balances report is not available (seen live, Oct 2026). */
   getBalances() {
     return this.request<T.Balances>("GET", "/v1/reporting/balances", { query: { currency_code: "ALL" } });
   }
@@ -340,6 +343,9 @@ export function describeError(body: unknown): { name: string | null; issue: stri
     name: b.name ?? null,
     issue,
     message:
-      Array.from(new Set([b.name, issue, b.details?.[0]?.description ?? b.message].filter(Boolean))).join(": ") || "Unknown error",
+      Array.from(new Set([b.name, issue, b.details?.[0]?.description ?? b.message].filter(Boolean))).join(": ") ||
+      // The sandbox answers some calls with an empty body, e.g. 403 for a negative-testing code the
+      // endpoint does not support.
+      (body === null || body === undefined || body === "" ? "PayPal sent no error body" : "Unknown error"),
   };
 }

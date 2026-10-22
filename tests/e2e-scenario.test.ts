@@ -96,7 +96,7 @@ describe("run the night (fake sandbox)", () => {
     expect(actions[0].type).toBe("reauthorize_authorization");
     expect(actions[0].decision).toBe("auto");
     expect(actions[0].status).toBe("failed");
-    expect(JSON.stringify(actions[0].response?.body)).toContain("REAUTHORIZATION_NOT_SUPPORTED_FOR_PAYMENT_SOURCE");
+    expect(JSON.stringify(actions[0].response?.body)).toContain("REAUTHORIZATION_TOO_SOON");
     expect(actions[1].type).toBe("ask_owner");
     expect(actions[1].status).toBe("awaiting_approval");
     expect(honor.status).toBe("awaiting_approval");

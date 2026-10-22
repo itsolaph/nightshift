@@ -1,6 +1,7 @@
 // An in-memory stand-in for the PayPal sandbox REST API, for tests only. It implements just enough
 // of Orders v2, Payments v2 and Invoicing v2 for the scenario flow, honours PayPal-Request-Id
 // replays and the PayPal-Mock-Response negative-testing header, and records every request.
+// Where the live sandbox differs from the docs, the fake follows the sandbox (docs/PAYPAL-NOTES.md).
 
 import type { FetchLike } from "@/lib/paypal/client";
 
@@ -18,8 +19,22 @@ export class FakePayPal {
   refunds = new Map<string, Rec>();
   invoices = new Map<string, Rec>();
   private replays = new Map<string, { status: number; body: unknown }>();
-  /** Force a reauthorize answer, like the real sandbox does for card authorizations. */
-  reauthorizeError: string | null = "REAUTHORIZATION_NOT_SUPPORTED_FOR_PAYMENT_SOURCE";
+  /** Force a reauthorize answer; the live sandbox refuses a fresh authorization with REAUTHORIZATION_TOO_SOON. */
+  reauthorizeError: string | null = "REAUTHORIZATION_TOO_SOON";
+  /** false = an app without card processing: payment_source.card gets 422 PAYEE_NOT_ENABLED_FOR_CARD_PROCESSING. */
+  cardProcessing = true;
+  /** Balance report rows; null answers 404 NOT_FOUND like the sandbox account used for the live checks. */
+  balances: Rec[] | null = null;
+
+  /** A buyer approves a PayPal-checkout order (what PayPal's checkout page does). */
+  approve(orderId: string, email: string) {
+    const order = this.orders.get(orderId);
+    if (!order || order.status !== "PAYER_ACTION_REQUIRED") return false;
+    order.status = "APPROVED";
+    order.payer = { email_address: email };
+    order.payment_source = { paypal: { email_address: email } };
+    return true;
+  }
 
   fetch: FetchLike = async (input, init) => {
     const url = new URL(input);
@@ -38,25 +53,25 @@ export class FakePayPal {
       return json(replay.status === 201 ? 200 : replay.status, replay.body);
     }
     const mock = headers["paypal-mock-response"] ? (JSON.parse(headers["paypal-mock-response"]).mock_application_codes as string) : null;
-    const result = mock ? error(422, "UNPROCESSABLE_ENTITY", mock) : this.route(method, url, body as Rec);
+    const result = mock ? mockAnswer(url.pathname, mock) : this.route(method, url, body as Rec);
     if (replayKey && method === "POST") this.replays.set(replayKey, result);
     return json(result.status, result.body);
   };
 
-  /** Authorizes or captures an order with a card, like the sandbox does for card payment sources. */
-  private pay(order: Rec, card: Rec, now: string) {
+  /** Authorizes or captures an order with a card, or with the approved PayPal buyer when `card` is null. */
+  private pay(order: Rec, card: Rec | null, now: string) {
     const unit = (order.purchase_units as Rec[])[0];
     const amount = unit.amount as Rec;
     const id = order.id as string;
     order.status = "COMPLETED";
-    order.payment_source = { card: { name: card.name, last_digits: String(card.number).slice(-4), brand: "VISA" } };
+    if (card) order.payment_source = { card: { name: card.name, last_digits: String(card.number).slice(-4), brand: "VISA" } };
     const payments = unit.payments as Rec;
     if (order.intent === "AUTHORIZE") {
       const auth = { id: pid("A"), status: "CREATED", amount, create_time: now, expiration_time: new Date(Date.now() + 29 * 864e5).toISOString(), supplementary_data: { related_ids: { order_id: id } } };
       this.authorizations.set(auth.id, auth);
       payments.authorizations = [auth];
     } else {
-      const declined = String(card.name).startsWith("CCREJECT");
+      const declined = Boolean(card && String(card.name).startsWith("CCREJECT"));
       const cap = { id: pid("C"), status: declined ? "DECLINED" : "COMPLETED", amount, final_capture: true, create_time: now, supplementary_data: { related_ids: { order_id: id } } };
       this.captures.set(cap.id, cap);
       payments.captures = [cap];
@@ -78,9 +93,15 @@ export class FakePayPal {
         create_time: now,
         purchase_units: [{ reference_id: "default", custom_id: unit.custom_id, description: unit.description, amount: unit.amount, payments: {} }],
       };
-      this.orders.set(id, order);
       const card = (body.payment_source as Rec)?.card as Rec | undefined;
+      if (card && !this.cardProcessing) return error(422, "UNPROCESSABLE_ENTITY", "PAYEE_NOT_ENABLED_FOR_CARD_PROCESSING");
+      this.orders.set(id, order);
       if (card) this.pay(order, card, now);
+      if ((body.payment_source as Rec)?.paypal) {
+        order.status = "PAYER_ACTION_REQUIRED";
+        order.links = [{ rel: "payer-action", href: `https://www.sandbox.paypal.com/checkoutnow?token=${id}`, method: "GET" }];
+        return { status: 200, body: order };
+      }
       return { status: 201, body: order };
     }
     if (method === "POST" && (m = p.match(/^\/v2\/checkout\/orders\/([^/]+)\/(authorize|capture)$/))) {
@@ -88,8 +109,10 @@ export class FakePayPal {
       if (!order) return error(404, "RESOURCE_NOT_FOUND", "INVALID_RESOURCE_ID");
       if ((m[2] === "authorize") !== (order.intent === "AUTHORIZE")) return error(422, "UNPROCESSABLE_ENTITY", "ACTION_DOES_NOT_MATCH_INTENT");
       const card = (body?.payment_source as Rec)?.card as Rec | undefined;
-      if (!card) return error(422, "UNPROCESSABLE_ENTITY", "ORDER_NOT_APPROVED");
-      this.pay(order, card, now);
+      if (card && !this.cardProcessing) return error(422, "UNPROCESSABLE_ENTITY", "PAYEE_NOT_ENABLED_FOR_CARD_PROCESSING");
+      if (order.status === "COMPLETED") return error(422, "UNPROCESSABLE_ENTITY", m[2] === "authorize" ? "ORDER_ALREADY_AUTHORIZED" : "ORDER_ALREADY_CAPTURED");
+      if (!card && order.status !== "APPROVED") return error(422, "UNPROCESSABLE_ENTITY", "ORDER_NOT_APPROVED");
+      this.pay(order, card ?? null, now);
       return { status: 201, body: order };
     }
     if (method === "GET" && (m = p.match(/^\/v2\/checkout\/orders\/([^/]+)$/))) {
@@ -145,7 +168,8 @@ export class FakePayPal {
         id: pid("R"),
         status: "COMPLETED",
         amount,
-        create_time: now,
+        // The sandbox returns refund times with a UTC offset, unlike captures.
+        create_time: pacificTime(now),
         capture_id: cap.id,
         links: [{ rel: "up", href: `https://api-m.sandbox.paypal.com/v2/payments/captures/${cap.id}`, method: "GET" }],
       };
@@ -162,8 +186,10 @@ export class FakePayPal {
       const items = body.items as Rec[];
       const total = items.reduce((s, i) => s + Number((i.unit_amount as Rec).value) * Number(i.quantity), 0);
       const id = `INV2-TEST-${String(++counter).padStart(4, "0")}-AAAA-BBBB`;
-      this.invoices.set(id, { id, status: "DRAFT", detail, primary_recipients: body.primary_recipients, amount: { currency_code: "USD", value: total.toFixed(2) }, due_amount: { currency_code: "USD", value: total.toFixed(2) }, payments: { paid_amount: { currency_code: "USD", value: "0.00" } } });
-      return { status: 201, body: { rel: "self", href: `https://api-m.sandbox.paypal.com/v2/invoicing/invoices/${id}`, method: "GET" } };
+      const invoice = { id, status: "DRAFT", detail, primary_recipients: body.primary_recipients, amount: { currency_code: "USD", value: total.toFixed(2) }, due_amount: { currency_code: "USD", value: total.toFixed(2) } };
+      this.invoices.set(id, invoice);
+      // With Prefer: return=representation the sandbox returns the whole invoice (no payments yet).
+      return { status: 201, body: invoice };
     }
     if ((m = p.match(/^\/v2\/invoicing\/invoices\/([^/]+)(\/(send|remind|payments))?$/))) {
       const inv = this.invoices.get(m[1]);
@@ -173,13 +199,14 @@ export class FakePayPal {
         inv.status = "SENT";
         return { status: 200, body: { rel: "payer-view", href: "https://www.sandbox.paypal.com/invoice/p#x", method: "GET" } };
       }
-      if (m[3] === "remind") return { status: 204, body: null };
+      // The docs say 204; the sandbox answers 200 with the invoice id.
+      if (m[3] === "remind") return { status: 200, body: { id: inv.id } };
       if (m[3] === "payments") {
-        const paid = Number(((inv.payments as Rec).paid_amount as Rec).value) + Number((body.amount as Rec).value);
+        const paid = Number((((inv.payments as Rec | undefined)?.paid_amount as Rec | undefined)?.value as string | undefined) ?? 0) + Number((body.amount as Rec).value);
         const total = Number((inv.amount as Rec).value);
         inv.payments = { paid_amount: { currency_code: "USD", value: paid.toFixed(2) } };
         inv.due_amount = { currency_code: "USD", value: (total - paid).toFixed(2) };
-        inv.status = paid >= total ? "PAID" : "PARTIALLY_PAID";
+        inv.status = paid >= total ? "MARKED_AS_PAID" : "PARTIALLY_PAID";
         return { status: 200, body: { payment_id: `EXTR-${counter}` } };
       }
     }
@@ -193,13 +220,27 @@ export class FakePayPal {
       return { status: 200, body: { transaction_details: details } };
     }
     if (method === "GET" && p === "/v1/reporting/balances") {
-      return { status: 200, body: { balances: [{ currency: "USD", primary: true, total_balance: { currency_code: "USD", value: "1234.56" } }] } };
+      if (this.balances) return { status: 200, body: { balances: this.balances } };
+      return { status: 404, body: { name: "NOT_FOUND", message: "The resource requested is not found in the system.", details: [] } };
     }
     if (method === "POST" && p === "/v1/notifications/verify-webhook-signature") {
       return { status: 200, body: { verification_status: (body as Rec).transmission_sig === "good-signature" ? "SUCCESS" : "FAILURE" } };
     }
     return error(404, "NOT_FOUND", `fake has no route for ${method} ${p}`);
   }
+}
+
+/** Codes the sandbox honours on authorization capture; anything else gets a bare 403 with no body. */
+const AUTH_CAPTURE_MOCKS = new Set(["PAYER_CANNOT_PAY", "TRANSACTION_REFUSED", "PAYEE_ACCOUNT_RESTRICTED", "AUTHORIZATION_EXPIRED"]);
+
+function mockAnswer(path: string, code: string) {
+  if (/^\/v2\/payments\/authorizations\/[^/]+\/capture$/.test(path) && !AUTH_CAPTURE_MOCKS.has(code)) return { status: 403, body: null };
+  return error(422, "UNPROCESSABLE_ENTITY", code);
+}
+
+/** "2026-10-22T02:30:46-07:00" for "2026-10-22T09:30:46.000Z". */
+function pacificTime(iso: string) {
+  return new Date(new Date(iso).getTime() - 7 * 3600_000).toISOString().replace(/\.\d{3}Z$/, "-07:00");
 }
 
 function error(status: number, name: string, issue: string) {

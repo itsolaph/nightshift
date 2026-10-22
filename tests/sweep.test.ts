@@ -8,6 +8,7 @@ import { FakePayPal } from "./fake-paypal";
 describe("sweep", () => {
   it("refreshes tracked orders, discovers unknown captures via Transaction Search, reads invoices and balances", async () => {
     const fake = new FakePayPal();
+    fake.balances = [{ currency: "USD", primary: true, total_balance: { currency_code: "USD", value: "1234.56" } }];
     const client = new PayPalClient({ clientId: "id", clientSecret: "secret", fetch: fake.fetch, sleep: async () => {} });
     const store = new Store(":memory:");
     const card = { number: "4012888888881881", expiry: "2030-12", name: "Buyer" };
@@ -29,5 +30,15 @@ describe("sweep", () => {
     const search = fake.requests.find((r) => r.path === "/v1/reporting/transactions")!;
     const start = new URLSearchParams(search.query).get("start_date")!;
     expect(start).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
+  });
+
+  it("treats the sandbox's 404 on balances as 'no balance report', not a sweep error", async () => {
+    const fake = new FakePayPal();
+    const client = new PayPalClient({ clientId: "id", clientSecret: "secret", fetch: fake.fetch, sleep: async () => {} });
+    const store = new Store(":memory:");
+    store.setKv("balances", [{ currency: "USD", total: "1.00", available: null }]);
+    const report = await sweep(store, client);
+    expect(report.errors).toEqual([]);
+    expect(store.getKv("balances")).toBeNull();
   });
 });

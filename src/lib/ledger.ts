@@ -18,6 +18,17 @@ import { describeError, type PayPalResult } from "./paypal/client";
 
 const now = () => new Date().toISOString();
 
+/**
+ * PayPal timestamps in UTC ISO form. The sandbox mixes formats: captures and authorizations come back
+ * as "2026-10-22T09:30:44Z", refunds and voided authorizations as "2026-10-22T02:30:46-07:00".
+ * Detectors sort and compare these as strings, so everything is normalised on the way in.
+ */
+export function utcTime(value: string | undefined | null): string | undefined {
+  if (!value) return undefined;
+  const ms = Date.parse(value);
+  return Number.isNaN(ms) ? value : new Date(ms).toISOString();
+}
+
 /** The id after the last slash of the HATEOAS link with the given rel, e.g. rel "up" on a capture. */
 export function idFromLink(links: T.Link[] | undefined, rel: string, segment: string): string | null {
   const link = links?.find((l) => l.rel === rel && l.href.includes(`/${segment}/`));
@@ -56,7 +67,7 @@ export function ingestOrder(store: Store, order: T.Order, meta: OrderMeta = {}):
     description: unit?.description ?? existing?.description ?? "",
     fulfillment: meta.fulfillment ?? existing?.fulfillment ?? "unfulfilled",
     shippedAt: meta.shippedAt !== undefined ? meta.shippedAt : (existing?.shippedAt ?? null),
-    createdAt: order.create_time ?? existing?.createdAt ?? now(),
+    createdAt: utcTime(order.create_time) ?? existing?.createdAt ?? now(),
     updatedAt: now(),
     source: existing?.source ?? meta.source ?? "sweep",
     scenario: meta.scenario ?? existing?.scenario,
@@ -79,8 +90,8 @@ export function ingestAuthorization(store: Store, auth: T.Authorization, orderId
     status: auth.status,
     amountCents: toCents(auth.amount?.value),
     currency: auth.amount?.currency_code ?? "USD",
-    createdAt: auth.create_time ?? existing?.createdAt ?? now(),
-    expiresAt: auth.expiration_time ?? existing?.expiresAt ?? "",
+    createdAt: utcTime(auth.create_time) ?? existing?.createdAt ?? now(),
+    expiresAt: utcTime(auth.expiration_time) ?? existing?.expiresAt ?? "",
     updatedAt: now(),
   };
   store.putLedger("authorization", row);
@@ -102,7 +113,7 @@ export function ingestCapture(store: Store, capture: T.Capture, orderId?: string
     amountCents: toCents(capture.amount?.value),
     currency: capture.amount?.currency_code ?? "USD",
     finalCapture: capture.final_capture ?? true,
-    createdAt: capture.create_time ?? existing?.createdAt ?? now(),
+    createdAt: utcTime(capture.create_time) ?? existing?.createdAt ?? now(),
     updatedAt: now(),
   };
   store.putLedger("capture", row);
@@ -119,7 +130,7 @@ export function ingestRefund(store: Store, refund: T.Refund, orderId?: string, c
     status: refund.status,
     amountCents: toCents(refund.amount?.value),
     currency: refund.amount?.currency_code ?? "USD",
-    createdAt: refund.create_time ?? existing?.createdAt ?? now(),
+    createdAt: utcTime(refund.create_time) ?? existing?.createdAt ?? now(),
     updatedAt: now(),
     ...(existing?.issuedBy ? { issuedBy: existing.issuedBy } : {}),
   };
@@ -161,7 +172,7 @@ export function ingestDispute(store: Store, d: T.DisputeSummary) {
     reason: d.reason ?? "",
     amountCents: toCents(d.dispute_amount?.value),
     currency: d.dispute_amount?.currency_code ?? "USD",
-    responseDueAt: d.seller_response_due_date ?? null,
+    responseDueAt: utcTime(d.seller_response_due_date) ?? null,
     transactionIds: (d.disputed_transactions ?? [])
       .map((t) => t.seller_transaction_id ?? t.buyer_transaction_id ?? "")
       .filter(Boolean),

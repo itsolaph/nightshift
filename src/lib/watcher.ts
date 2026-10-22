@@ -143,14 +143,17 @@ export async function sweep(store: Store, client: PayPalClient): Promise<SweepRe
     note("GET transactions (needs the Transaction search feature on the sandbox app)", search);
   }
 
-  // 5. Account balance (Transaction Search balances endpoint, same feature flag).
+  // 5. Account balance (Transaction Search balances endpoint, same feature flag). Some sandbox
+  // accounts answer 404 NOT_FOUND even with Transaction Search on; that means "no balance report
+  // here", not a failed sweep.
   const balances = await client.getBalances();
   if (balances.ok) {
     store.setKv(
       "balances",
       (balances.body.balances ?? []).map((b) => ({ currency: b.currency, total: b.total_balance?.value ?? null, available: b.available_balance?.value ?? null })),
     );
-  } else note("GET balances", balances);
+  } else if (balances.status === 404) store.setKv("balances", null);
+  else note("GET balances", balances);
 
   store.setKv("sweep:last", report);
   return report;
