@@ -9,8 +9,7 @@
 // tool name it is given and puts ids into URL paths unchecked.
 
 import { z } from "zod";
-import type { Store } from "../db";
-import { ACTION_TYPES } from "../domain";
+import { ACTION_TYPES, type Ledger } from "../domain";
 import type { PayPalClient } from "../paypal/client";
 import type { ChatTool, ToolCall } from "./llm";
 
@@ -22,7 +21,8 @@ export type ToolkitLike = {
 };
 
 export type ToolContext = {
-  store: Store;
+  /** Nightshift's ledger slice for an order (local store inline, HTTP from a Render Workflow task). */
+  ledgerLookup: (orderId: string) => Promise<unknown>;
   paypal: PayPalClient | null;
   toolkit: ToolkitLike | null;
 };
@@ -160,20 +160,7 @@ const TOOLS: ToolDef[] = [
     args: z.object({ order_id: PAYPAL_ID }),
     source: "ledger",
     needsPayPal: false,
-    run: async (args: { order_id: string }, ctx) => {
-      const ledger = ctx.store.ledger();
-      const order = ledger.orders.find((o) => o.id === args.order_id);
-      if (!order) return { error: `Order ${args.order_id} is not in the ledger` };
-      const { buyerNote, ...rest } = order;
-      return {
-        order: rest,
-        buyer_note_untrusted: buyerNote ?? null,
-        authorizations: ledger.authorizations.filter((a) => a.orderId === order.id),
-        captures: ledger.captures.filter((c) => c.orderId === order.id),
-        refunds: ledger.refunds.filter((r) => r.orderId === order.id),
-        failed_capture_attempts: ledger.captureAttempts.filter((a) => a.orderId === order.id && !a.ok),
-      };
-    },
+    run: (args: { order_id: string }, ctx) => ctx.ledgerLookup(args.order_id),
   },
 ];
 
@@ -282,4 +269,19 @@ export async function runReadTool(call: ToolCall, ctx: ToolContext): Promise<{ r
     const result = { error: `Tool failed: ${String(error).slice(0, 200)}` };
     return { result, text: JSON.stringify(result), ok: false };
   }
+}
+
+/** The ledger_lookup answer for an order. Buyer text is returned separately and labelled untrusted. */
+export function ledgerSlice(ledger: Ledger, orderId: string) {
+  const order = ledger.orders.find((o) => o.id === orderId);
+  if (!order) return { error: `Order ${orderId} is not in the ledger` };
+  const { buyerNote, ...rest } = order;
+  return {
+    order: rest,
+    buyer_note_untrusted: buyerNote ?? null,
+    authorizations: ledger.authorizations.filter((a) => a.orderId === order.id),
+    captures: ledger.captures.filter((c) => c.orderId === order.id),
+    refunds: ledger.refunds.filter((r) => r.orderId === order.id),
+    failed_capture_attempts: ledger.captureAttempts.filter((a) => a.orderId === order.id && !a.ok),
+  };
 }

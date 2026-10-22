@@ -1,0 +1,120 @@
+# Render Blueprint for Nightshift (sandbox demo).
+#
+#   nightshift          Next.js web service. SQLite on a persistent disk, so the background worker
+#                       runs inside this process (WORKER_MODE=inline): a disk belongs to one service
+#                       and a separate worker could not open the database.
+#   nightshift-sweep    Cron job that asks the web service to sweep PayPal every 10 minutes, over
+#                       Render's private network.
+#   nightshift-agent    Optional Render Workflow (TypeScript SDK) that runs the LLM triage on its own
+#                       compute. Active once RENDER_API_KEY is set on the web service; until then
+#                       agent runs stay inline. The policy gate and executor always stay in the web
+#                       service.
+
+services:
+  - type: web
+    name: nightshift
+    runtime: node
+    region: oregon
+    plan: starter
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    disk:
+      name: nightshift-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: DATABASE_PATH
+        value: /data/nightshift.db
+      - key: WORKER_MODE
+        value: inline
+      - key: DEMO_MODE
+        value: "true"
+      - key: PAYPAL_ENV
+        value: sandbox
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: PAYPAL_WEBHOOK_ID
+        sync: false
+      - key: PUBLIC_BASE_URL
+        sync: false
+      - key: LLM_BASE_URL
+        value: https://openrouter.ai/api/v1
+      - key: LLM_MODEL
+        value: anthropic/claude-haiku-5.5
+      - key: LLM_API_KEY
+        sync: false
+      - key: AG_STUDIO
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+      - key: CRON_SECRET
+        generateValue: true
+      - key: INTERNAL_API_TOKEN
+        generateValue: true
+      # Optional: a Render API key turns on agent runs in the nightshift-agent workflow.
+      - key: RENDER_API_KEY
+        sync: false
+      - key: RENDER_WORKFLOW_SLUG
+        fromService:
+          type: workflow
+          name: nightshift-agent
+          property: slug
+
+  - type: cron
+    name: nightshift-sweep
+    runtime: node
+    region: oregon
+    plan: starter
+    schedule: "*/10 * * * *"
+    buildCommand: "true"
+    startCommand: 'curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" "http://$NIGHTSHIFT_HOSTPORT/api/sweep"'
+    envVars:
+      - key: CRON_SECRET
+        fromService:
+          type: web
+          name: nightshift
+          envVarKey: CRON_SECRET
+      - key: NIGHTSHIFT_HOSTPORT
+        fromService:
+          type: web
+          name: nightshift
+          property: hostport
+
+  - type: workflow
+    name: nightshift-agent
+    runtime: node
+    region: oregon
+    buildCommand: npm ci
+    startCommand: npx tsx workflows/index.ts
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: PAYPAL_ENV
+        value: sandbox
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: LLM_BASE_URL
+        value: https://openrouter.ai/api/v1
+      - key: LLM_MODEL
+        value: anthropic/claude-haiku-5.5
+      - key: LLM_API_KEY
+        sync: false
+      - key: INTERNAL_API_TOKEN
+        fromService:
+          type: web
+          name: nightshift
+          envVarKey: INTERNAL_API_TOKEN
+      - key: NIGHTSHIFT_INTERNAL_HOSTPORT
+        fromService:
+          type: web
+          name: nightshift
+          property: hostport

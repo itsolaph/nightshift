@@ -124,8 +124,7 @@ describe("triage agent", () => {
 
 describe("read tools", () => {
   it("refuses tools that are not on the read allowlist and bad ids", async () => {
-    const store = new Store(":memory:");
-    const ctx = { store, paypal: null, toolkit: { handleToolCall: async () => ({ content: "{}" }) } };
+    const ctx = { ledgerLookup: async () => ({}), paypal: null, toolkit: { handleToolCall: async () => ({ content: "{}" }) } };
     expect((await runReadTool(call("x", "pay_order", { id: "ABC12345" }), ctx)).text).toContain("not available");
     expect((await runReadTool(call("x", "get_order", { id: "ABC/../capture" }), ctx)).text).toContain("Invalid arguments");
     const ok = await runReadTool(call("x", "get_order", { id: "5O190127TN364715T" }), ctx);
