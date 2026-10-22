@@ -15,7 +15,7 @@ services:
     name: nightshift
     runtime: node
     region: oregon
-    plan: starter
+    plan: 0.5c-512mb # paid instance: persistent disks need one
     buildCommand: npm ci && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
@@ -71,7 +71,6 @@ services:
     name: nightshift-sweep
     runtime: node
     region: oregon
-    plan: starter
     schedule: "*/10 * * * *"
     buildCommand: "true"
     startCommand: 'curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" "http://$NIGHTSHIFT_HOSTPORT/api/sweep"'
