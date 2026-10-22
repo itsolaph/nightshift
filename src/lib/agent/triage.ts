@@ -94,7 +94,7 @@ export async function triageIncident(deps: TriageDeps, incidentId: string): Prom
   store.addEvent({
     incidentId,
     kind: "agent_step",
-    actor: "agent",
+    actor: deps.llm ? "agent" : "system",
     title: deps.llm ? "Agent started triage" : "Rule-based triage (no LLM key configured)",
     detail: { model: deps.llm ? model : null, runner: "inline" },
   });
