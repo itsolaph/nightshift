@@ -21,7 +21,8 @@ export function idempotencyKey(
     .update([incidentId, type, targetId ?? "-", amountCents ?? "-"].join("|"))
     .digest("hex")
     .slice(0, 32);
-  return `nightshift-${digest}`;
+  // PayPal mentions a 38-character limit for request ids: "ns-" + 32 hex = 35.
+  return `ns-${digest}`;
 }
 
 /** Money an action recovers or protects when it succeeds, for the "money saved" totals. */
