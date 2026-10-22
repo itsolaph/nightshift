@@ -165,8 +165,10 @@ export async function headlessApprover(client: PayPalClient, opts: { chromiumPat
         const url = new URL(order.approveUrl);
         url.searchParams.set("country.x", "US");
         url.searchParams.set("locale.x", "en_US");
-        const settle = () => page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => undefined);
-        await page.goto(url.toString(), { waitUntil: "networkidle", timeout: 60_000 });
+        const settle = () => page.waitForLoadState("networkidle", { timeout: 8_000 }).catch(() => undefined);
+        // Not "networkidle": PayPal's checkout page sometimes keeps the network busy for over a minute.
+        await page.goto(url.toString(), { waitUntil: "load", timeout: 60_000 });
+        await settle();
         await page.locator("#guestCheckout, #createAccount").first().click({ timeout: 30_000 });
         await settle();
         const card = page.locator("#cardNumber").first();
