@@ -1,0 +1,35 @@
+# dependencies
+node_modules/
+
+# next.js / build output
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# env and secrets: only .env.example is tracked
+.env
+.env.*
+!.env.example
+sandbox.env
+*.pem
+*.key
+
+# local data
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# test / tooling
+coverage/
+.vitest/
+npm-debug.log*
+yarn-error.log*
+.DS_Store
+.vercel
