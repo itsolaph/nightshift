@@ -24,6 +24,8 @@ export type PayPalResult<B = unknown> = {
 
 export type RequestOptions = {
   body?: unknown;
+  /** Pre-serialised JSON body, sent byte for byte (webhook verification needs the event exactly as received). */
+  rawJson?: string;
   query?: Record<string, string | number | boolean | undefined>;
   /** PayPal-Request-Id. Generated for POSTs when not given. */
   requestId?: string;
@@ -99,7 +101,8 @@ export class PayPalClient {
         Accept: "application/json",
         Prefer: opts.prefer ?? "return=representation",
       };
-      if (opts.body !== undefined) headers["Content-Type"] = "application/json";
+      const payload = opts.rawJson ?? (opts.body === undefined ? undefined : JSON.stringify(opts.body));
+      if (payload !== undefined) headers["Content-Type"] = "application/json";
       if (requestId) headers["PayPal-Request-Id"] = requestId;
       if (opts.mockCode) headers["PayPal-Mock-Response"] = JSON.stringify({ mock_application_codes: opts.mockCode });
 
@@ -108,7 +111,7 @@ export class PayPalClient {
         response = await this.fetchImpl(url.toString(), {
           method,
           headers,
-          body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
+          body: payload,
         });
       } catch (error) {
         if (attempt < retries) {
@@ -276,11 +279,13 @@ export class PayPalClient {
       body: { url, event_types: eventTypes.map((name) => ({ name })) },
     });
   }
-  verifyWebhookSignature(body: T.VerifyWebhookSignatureRequest) {
+  /** `rawEvent` is the webhook body exactly as PayPal sent it; re-serialising it can break verification. */
+  verifyWebhookSignature(fields: Omit<T.VerifyWebhookSignatureRequest, "webhook_event">, rawEvent: string) {
+    const head = JSON.stringify(fields).slice(0, -1);
     return this.request<{ verification_status: "SUCCESS" | "FAILURE" }>(
       "POST",
       "/v1/notifications/verify-webhook-signature",
-      { body },
+      { rawJson: `${head},"webhook_event":${rawEvent}}` },
     );
   }
 }
