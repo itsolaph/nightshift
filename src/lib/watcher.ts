@@ -143,6 +143,15 @@ export async function sweep(store: Store, client: PayPalClient): Promise<SweepRe
     note("GET transactions (needs the Transaction search feature on the sandbox app)", search);
   }
 
+  // 5. Account balance (Transaction Search balances endpoint, same feature flag).
+  const balances = await client.getBalances();
+  if (balances.ok) {
+    store.setKv(
+      "balances",
+      (balances.body.balances ?? []).map((b) => ({ currency: b.currency, total: b.total_balance?.value ?? null, available: b.available_balance?.value ?? null })),
+    );
+  } else note("GET balances", balances);
+
   store.setKv("sweep:last", report);
   return report;
 }

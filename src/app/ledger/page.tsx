@@ -12,6 +12,7 @@ export default async function LedgerPage() {
   const s = store();
   const data = analyticsData(s);
   const sweep = s.getKv<{ at: string; errors: string[] }>("sweep:last");
+  const balances = s.getKv<{ currency: string; total: string | null; available: string | null }[]>("balances") ?? [];
   return (
     <>
       <div className="page-head">
@@ -23,6 +24,11 @@ export default async function LedgerPage() {
           </p>
         </div>
         <div className="row">
+          {balances.map((b) => (
+            <span key={b.currency} className="badge" title="GET /v1/reporting/balances (can lag up to 3 hours)">
+              Sandbox balance {b.total ?? "?"} {b.currency}
+            </span>
+          ))}
           {sweep ? (
             <span className="small muted">
               Last sweep {sweep.at.slice(11, 16)} UTC{sweep.errors.length ? `, ${sweep.errors.length} warning(s)` : ""}

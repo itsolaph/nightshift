@@ -5,7 +5,7 @@
 import type { FetchLike } from "@/lib/paypal/client";
 
 type Rec = Record<string, unknown>;
-export type Recorded = { method: string; path: string; headers: Record<string, string>; body: unknown };
+export type Recorded = { method: string; path: string; query: string; headers: Record<string, string>; body: unknown };
 
 let counter = 0;
 const pid = (prefix: string) => `${prefix}${String(++counter).padStart(17 - prefix.length, "0")}`;
@@ -27,7 +27,7 @@ export class FakePayPal {
     const headers = Object.fromEntries(Object.entries((init?.headers ?? {}) as Record<string, string>).map(([k, v]) => [k.toLowerCase(), v]));
     let body: unknown = undefined;
     if (typeof init?.body === "string" && init.body && headers["content-type"]?.includes("json")) body = JSON.parse(init.body);
-    this.requests.push({ method, path: url.pathname, headers, body });
+    this.requests.push({ method, path: url.pathname, query: url.search, headers, body });
 
     if (url.pathname === "/v1/oauth2/token") return json(200, { access_token: "A21-test", token_type: "Bearer", expires_in: 32400 });
 
@@ -170,7 +170,14 @@ export class FakePayPal {
       return { status: 200, body: { items: [...this.invoices.values()], total_pages: 1, total_items: this.invoices.size } };
     }
     if (method === "GET" && p === "/v1/customer/disputes") return { status: 200, body: { items: [] } };
-    if (method === "GET" && p === "/v1/reporting/transactions") return { status: 200, body: { transaction_details: [] } };
+    if (method === "GET" && p === "/v1/reporting/transactions") {
+      // Transaction Search shows captures (event code T0006) after a delay; here, immediately.
+      const details = [...this.captures.values()].map((c) => ({ transaction_info: { transaction_id: c.id, transaction_event_code: "T0006" } }));
+      return { status: 200, body: { transaction_details: details } };
+    }
+    if (method === "GET" && p === "/v1/reporting/balances") {
+      return { status: 200, body: { balances: [{ currency: "USD", primary: true, total_balance: { currency_code: "USD", value: "1234.56" } }] } };
+    }
     if (method === "POST" && p === "/v1/notifications/verify-webhook-signature") {
       return { status: 200, body: { verification_status: (body as Rec).transmission_sig === "good-signature" ? "SUCCESS" : "FAILURE" } };
     }
