@@ -1058,6 +1058,23 @@ hr.sep {
 .ag-cell .badge {
   line-height: 1.5;
 }
+.cell-two {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+  line-height: 1.25;
+  min-width: 0;
+}
+.cell-two > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cell-two .sub {
+  color: var(--ns-muted);
+  font-size: 0.78rem;
+}
 
 .show-sm {
   display: none;
@@ -1081,6 +1098,11 @@ hr.sep {
 }
 
 @media (max-width: 760px) {
+  /* backdrop-filter would make the topbar the containing block of the fixed bottom nav */
+  .topbar {
+    backdrop-filter: none;
+    background: rgba(7, 13, 26, 0.98);
+  }
   html,
   body {
     font-size: 15px;
@@ -1124,6 +1146,23 @@ hr.sep {
 }
 .ag-cell .badge {
   line-height: 1.5;
+}
+.cell-two {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+  line-height: 1.25;
+  min-width: 0;
+}
+.cell-two > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cell-two .sub {
+  color: var(--ns-muted);
+  font-size: 0.78rem;
 }
 
 .show-sm {

@@ -33,27 +33,33 @@ function StatusCell({ value }: ICellRendererParams<Row, string>) {
   return <span className={`badge ${STATUS_TONE[value ?? ""] ?? ""}`}>{STATUS_LABEL[value ?? ""] ?? value}</span>;
 }
 
+function TitleCell({ data }: ICellRendererParams<Row>) {
+  if (!data) return null;
+  const triage = data.diagnosisSource === "llm" ? "AI agent" : data.diagnosisSource === "rules" ? "rules" : "triage pending";
+  return (
+    <div className="cell-two">
+      <span>{data.title}</span>
+      <span className="sub">
+        {data.type} · {triage}
+      </span>
+    </div>
+  );
+}
+
 export function IncidentsGrid({ rows, height = 420 }: { rows: Row[]; height?: number }) {
   const auto = rows.length > 0 && rows.length <= 12;
   const router = useRouter();
   const columns = useMemo<ColDef<Row>[]>(
     () => [
       { field: "status", headerName: "Status", width: 132, cellRenderer: StatusCell, cellClass: "cell-center" },
-      { field: "title", headerName: "What happened", flex: 1, minWidth: 280, tooltipField: "title" },
-      { field: "type", headerName: "Type", width: 165 },
-      { field: "atRisk", headerName: "At risk", width: 108, type: "rightAligned", valueFormatter: (p) => usd(p.value) },
-      { field: "saved", headerName: "Protected", width: 112, type: "rightAligned", valueFormatter: (p) => (p.value ? usd(p.value) : "") },
-      {
-        field: "diagnosisSource",
-        headerName: "Triage",
-        width: 100,
-        valueFormatter: (p) => (p.value === "llm" ? "AI agent" : p.value === "rules" ? "Rules" : "Pending"),
-      },
+      { field: "title", headerName: "What happened", flex: 1, minWidth: 220, tooltipField: "title", cellRenderer: TitleCell },
+      { field: "atRisk", headerName: "At risk", width: 98, type: "rightAligned", valueFormatter: (p) => usd(p.value) },
+      { field: "saved", headerName: "Saved", width: 96, type: "rightAligned", valueFormatter: (p) => (p.value ? usd(p.value) : "") },
       {
         field: "detectedAt",
         headerName: "Detected",
         headerTooltip: "On Nightshift's detector clock (includes the demo offset)",
-        width: 140,
+        width: 132,
         valueFormatter: (p) => String(p.value ?? "").replace("T", " ").slice(5, 16),
         sort: "desc",
       },
@@ -73,7 +79,7 @@ export function IncidentsGrid({ rows, height = 420 }: { rows: Row[]; height?: nu
         overlayNoRowsTemplate="No incidents yet. Run a scenario in the lab, or wait for the next sweep."
         animateRows
         domLayout={auto ? "autoHeight" : "normal"}
-        rowHeight={46}
+        rowHeight={54}
         tooltipShowDelay={400}
       />
     </div>
