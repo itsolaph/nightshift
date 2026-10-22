@@ -36,6 +36,12 @@ export const nightshiftStudioTheme = studioTheme.withParams({
   studioWidgetBorder: { width: 1, color: "#22314f" },
   studioWidgetBorderRadius: 12,
   studioWidgetTitleTextColor: "#e8edf7",
+  studioWidgetTitleFontFamily: FONT,
+  studioWidgetTitleFontSize: 14,
+  studioWidgetTitleFontWeight: 600,
+  studioCanvasFontFamily: FONT,
+  studioValueWidgetFontSize: 30,
+  chartFontFamily: FONT,
   studioWidgetSubtitleTextColor: "#8494b3",
 
   gridHeaderBackgroundColor: "#101a2f",

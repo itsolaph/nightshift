@@ -17,6 +17,7 @@ const kpi = (text: string, value: { id: string; aggregation?: "sum" | "countd" }
 
 export const initialReport: AgReportState<NightshiftRegistry> = {
   selectedPageId: "overview",
+  panels: { filters: { collapsed: true } },
   pages: [
     {
       id: "overview",

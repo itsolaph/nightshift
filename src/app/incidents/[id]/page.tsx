@@ -29,7 +29,7 @@ function ActionTriptych({ action }: { action: ActionRecord }) {
         <div className="row">
           <h3>{actionLabel(action.type)}</h3>
           {action.amountCents ? <Money cents={action.amountCents} currency={action.currency ?? "USD"} className="amber" /> : null}
-          {action.targetId ? <code className="pid">{action.targetId}</code> : null}
+          {action.targetId && action.type !== "ask_owner" ? <code className="pid">{action.targetId}</code> : null}
         </div>
         <ActionStatus status={action.status} />
       </div>

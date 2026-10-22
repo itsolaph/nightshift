@@ -67,9 +67,9 @@ export function LedgerGrids({ data, webhooks }: Props) {
           cols: [
             id("id", "Order"),
             { field: "intent", width: 110 },
-            { field: "status", width: 130, cellRenderer: Tone },
+            { field: "status", width: 130, cellRenderer: Tone, cellClass: "cell-center" },
             money("amount", "Amount"),
-            { field: "fulfillment", headerName: "Fulfilment", width: 210, cellRenderer: FulfillmentCell },
+            { field: "fulfillment", headerName: "Fulfilment", width: 220, cellRenderer: FulfillmentCell, cellClass: "cell-center" },
             { field: "payer", width: 200 },
             { field: "cartRef", headerName: "Cart", width: 120 },
             { field: "description", flex: 1, minWidth: 200 },
@@ -178,9 +178,10 @@ export function LedgerGrids({ data, webhooks }: Props) {
           rowData={config.rows}
           columnDefs={config.cols}
           getRowId={(p) => String((p.data as { id: string }).id)}
-          defaultColDef={{ sortable: true, filter: true, resizable: true }}
+          defaultColDef={{ sortable: true, filter: true, resizable: true, cellClass: "cell-center" }}
           overlayNoRowsTemplate="Nothing here yet."
           enableCellTextSelection
+          rowHeight={44}
         />
       </div>
     </div>

@@ -318,6 +318,7 @@ export function describeError(body: unknown): { name: string | null; issue: stri
   return {
     name: b.name ?? null,
     issue,
-    message: [b.name, issue, b.details?.[0]?.description ?? b.message].filter(Boolean).join(": ") || "Unknown error",
+    message:
+      Array.from(new Set([b.name, issue, b.details?.[0]?.description ?? b.message].filter(Boolean))).join(": ") || "Unknown error",
   };
 }

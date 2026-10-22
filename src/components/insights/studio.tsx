@@ -16,7 +16,7 @@ import { nightshiftStudioTheme } from "./theme";
 
 if (process.env.NODE_ENV !== "production") enableStudioDevValidations();
 
-const STORAGE_KEY = "nightshift.insights.report.v1";
+const STORAGE_KEY = "nightshift.insights.report.v2";
 
 type Props = { data: AnalyticsData; licenseKey?: string; aiModel?: string; clockOffsetMs: number };
 

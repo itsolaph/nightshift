@@ -37,6 +37,14 @@ function savedBy(action: ActionRecord): number {
   }
 }
 
+const OUTCOME: Record<string, string> = {
+  capture_authorization: "captured",
+  reauthorize_authorization: "reauthorized",
+  refund_capture: "refunded",
+  void_authorization: "Authorization voided",
+  send_invoice_reminder: "Invoice reminder sent by PayPal",
+};
+
 export type ExecuteResult = { action: ActionRecord; executed: boolean };
 
 export async function executeAction(
@@ -129,7 +137,10 @@ export async function executeAction(
       incidentId: incident.id,
       kind: "outcome",
       actor: "executor",
-      title: saved > 0 ? `${formatMoney(saved, succeeded.currency ?? updated.currency)} protected` : "Done",
+      title:
+        saved > 0
+          ? `${formatMoney(saved, succeeded.currency ?? updated.currency)} protected (${OUTCOME[succeeded.type] ?? succeeded.type})`
+          : (OUTCOME[succeeded.type] ?? "Done"),
       detail: { actionId: succeeded.id, type: succeeded.type },
     });
   }

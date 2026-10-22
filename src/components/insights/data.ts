@@ -5,7 +5,14 @@ import type { AnalyticsData } from "@/lib/summary";
 import type { NightshiftRegistry } from "./countdown-widget";
 
 type Spec = [id: string, name: string, format: AgFormat, hide?: boolean];
-const fields = (specs: Spec[]): AgFieldDefinition[] => specs.map(([id, name, format, hide]) => ({ id, name, format, ...(hide ? { hide } : {}) }));
+const fields = (specs: Spec[]): AgFieldDefinition[] =>
+  specs.map(([id, name, format, hide]) => ({
+    id,
+    name,
+    format,
+    ...(format === "currencyFormat" ? { formatOptions: { format: "$#,##0.00" } } : {}),
+    ...(hide ? { hide } : {}),
+  }));
 
 const manyToOne = (id: string, source: string, target: string): AgRelationDefinition => {
   const [sourceTable, sourceField] = source.split(".");

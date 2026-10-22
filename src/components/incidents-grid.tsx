@@ -34,32 +34,34 @@ function StatusCell({ value }: ICellRendererParams<Row, string>) {
 }
 
 export function IncidentsGrid({ rows, height = 420 }: { rows: Row[]; height?: number }) {
+  const auto = rows.length > 0 && rows.length <= 12;
   const router = useRouter();
   const columns = useMemo<ColDef<Row>[]>(
     () => [
-      { field: "status", headerName: "Status", width: 140, cellRenderer: StatusCell },
-      { field: "type", headerName: "Type", width: 170 },
-      { field: "title", headerName: "What happened", flex: 1, minWidth: 260, tooltipField: "title" },
-      { field: "atRisk", headerName: "At risk", width: 115, type: "rightAligned", valueFormatter: (p) => usd(p.value), sort: undefined },
-      { field: "saved", headerName: "Protected", width: 115, type: "rightAligned", valueFormatter: (p) => (p.value ? usd(p.value) : "") },
-      {
-        field: "deadline",
-        headerName: "Deadline",
-        width: 130,
-        valueFormatter: (p) => (p.value ? String(p.value).slice(0, 10) : ""),
-      },
+      { field: "status", headerName: "Status", width: 132, cellRenderer: StatusCell, cellClass: "cell-center" },
+      { field: "title", headerName: "What happened", flex: 1, minWidth: 280, tooltipField: "title" },
+      { field: "type", headerName: "Type", width: 165 },
+      { field: "atRisk", headerName: "At risk", width: 108, type: "rightAligned", valueFormatter: (p) => usd(p.value) },
+      { field: "saved", headerName: "Protected", width: 112, type: "rightAligned", valueFormatter: (p) => (p.value ? usd(p.value) : "") },
       {
         field: "diagnosisSource",
         headerName: "Triage",
-        width: 110,
+        width: 100,
         valueFormatter: (p) => (p.value === "llm" ? "AI agent" : p.value === "rules" ? "Rules" : "Pending"),
       },
-      { field: "detectedAt", headerName: "Detected (detector clock)", width: 200, valueFormatter: (p) => String(p.value ?? "").replace("T", " ").slice(0, 16), sort: "desc" },
+      {
+        field: "detectedAt",
+        headerName: "Detected",
+        headerTooltip: "On Nightshift's detector clock (includes the demo offset)",
+        width: 140,
+        valueFormatter: (p) => String(p.value ?? "").replace("T", " ").slice(5, 16),
+        sort: "desc",
+      },
     ],
     [],
   );
   return (
-    <div style={{ height, width: "100%" }}>
+    <div style={{ height: auto ? undefined : height, width: "100%" }}>
       <AgGridReact<Row>
         theme={nightGridTheme}
         rowData={rows}
@@ -70,6 +72,8 @@ export function IncidentsGrid({ rows, height = 420 }: { rows: Row[]; height?: nu
         onRowClicked={(e) => e.data && router.push(`/incidents/${e.data.id}`)}
         overlayNoRowsTemplate="No incidents yet. Run a scenario in the lab, or wait for the next sweep."
         animateRows
+        domLayout={auto ? "autoHeight" : "normal"}
+        rowHeight={46}
         tooltipShowDelay={400}
       />
     </div>

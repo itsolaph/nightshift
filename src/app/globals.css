@@ -755,6 +755,7 @@ label.field .hint {
   border-color: rgba(70, 211, 154, 0.3);
 }
 .feed-title {
+  overflow-wrap: anywhere;
   font-size: 0.9rem;
   color: var(--ns-ink);
   word-break: break-word;
@@ -818,6 +819,7 @@ label.field .hint {
   background: var(--ns-bg-2);
 }
 .triptych > div {
+  overflow-wrap: anywhere;
   padding: 14px 16px;
   border-right: 1px solid var(--ns-border);
   min-width: 0;
@@ -869,6 +871,7 @@ label.field .hint {
   border-bottom: 1px solid var(--ns-border);
 }
 .approval-body {
+  overflow-wrap: anywhere;
   padding: 14px 18px;
   display: flex;
   flex-direction: column;
@@ -1048,6 +1051,14 @@ hr.sep {
   margin: 4px 0;
 }
 
+.ag-cell.cell-center {
+  display: flex;
+  align-items: center;
+}
+.ag-cell .badge {
+  line-height: 1.5;
+}
+
 .show-sm {
   display: none;
 }
@@ -1107,7 +1118,15 @@ hr.sep {
   .nav a .hide-sm {
     display: none;
   }
-  .nav a .show-sm {
+  .nav a .ag-cell.cell-center {
+  display: flex;
+  align-items: center;
+}
+.ag-cell .badge {
+  line-height: 1.5;
+}
+
+.show-sm {
     display: inline;
   }
   .page {
