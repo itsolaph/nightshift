@@ -91,8 +91,8 @@ All calls go to `api-m.sandbox.paypal.com`; the app refuses to start with `PAYPA
 | Endpoint | Why |
 |---|---|
 | `POST /v1/oauth2/token` | Client-credentials token, cached and refreshed |
-| `POST /v2/checkout/orders` (`intent: AUTHORIZE` and `CAPTURE`, `payment_source.card`) | Scenario lab: real sandbox orders without a buyer approval step |
-| `POST /v2/checkout/orders/{id}/authorize`, `.../capture` (with `payment_source.card`) | Scenario lab: the documented two-step card flow for the pre-order and refund scenarios, falling back to single-step if refused |
+| `POST /v2/checkout/orders` (`intent: AUTHORIZE` and `CAPTURE`) | Scenario lab: real sandbox orders. With `payment_source.card` when the sandbox app has card processing (no buyer step); otherwise with `payment_source.paypal`, approved by a sandbox buyer on PayPal's checkout page |
+| `POST /v2/checkout/orders/{id}/authorize`, `.../capture` | Scenario lab: authorize or capture the approved PayPal-checkout order, or the documented two-step card flow |
 | `GET /v2/checkout/orders/{id}` | Sweep and webhooks: refresh an order with its authorizations, captures and refunds; agent read tool (via Agent Toolkit) |
 | `GET /v2/payments/authorizations/{id}` | Agent read tool; webhook linking |
 | `POST /v2/payments/authorizations/{id}/capture` | Executor: capture a shipped order. Scenario lab: the shop's capture, failed with negative testing |
@@ -109,7 +109,7 @@ All calls go to `api-m.sandbox.paypal.com`; the app refuses to start with `PAYPA
 | `GET /v1/customer/disputes` | Sweep and dispute-deadline detector; agent read tool (via Agent Toolkit) |
 | `POST /v1/notifications/webhooks`, `GET /v1/notifications/webhooks` | On startup, register the webhook when `PUBLIC_BASE_URL` is an https URL |
 | `POST /v1/notifications/verify-webhook-signature` | Verify every incoming webhook, with the raw body |
-| `PayPal-Mock-Response` header | Sandbox negative testing: force `INSTRUMENT_DECLINED` on the shop's capture |
+| `PayPal-Mock-Response` header | Sandbox negative testing: force `PAYER_CANNOT_PAY` on the shop's capture |
 | `PayPal-Request-Id` header | Every POST; the executor derives it from incident + action |
 
 **PayPal Agent Toolkit.** The agent's PayPal reads use the official toolkit ([@paypal/agent-toolkit](https://www.npmjs.com/package/@paypal/agent-toolkit), `/openai` entry: `getTools` / `handleToolCall`) for `get_order`, `get_refund`, `get_invoice`, `list_transactions` and `list_disputes`. The toolkit has no tool to read an authorization or a capture, so `get_authorization` and `get_capture` use Nightshift's own typed REST client ([src/lib/paypal/client.ts](src/lib/paypal/client.ts)). Only read actions are enabled, tool names are allowlisted and every argument is validated before the toolkit sees it, because its `handleToolCall` would otherwise dispatch any tool name and put ids into URL paths unchecked. The UI labels each tool call with where it went.
@@ -132,7 +132,7 @@ You need Node.js 22.13 or later (Nightshift uses the built-in `node:sqlite`; Nod
 
 1. Apps & Credentials → make sure the toggle says **Sandbox** → **Create App** → type Merchant, pick your default sandbox business account.
 2. Copy the **Client ID** and **Secret**.
-3. In the app's features, enable **Transaction search** and **Invoicing** (and keep **Accept payments** with advanced card payments on, so card orders work without buyer approval). Save.
+3. In the app's features, enable **Transaction search** and **Invoicing**. If the app offers advanced credit and debit card payments, turn them on: card orders then need no buyer step and the lab runs in about a minute. Without them the lab still works through PayPal checkout (see below). Save.
 4. Webhooks (optional, needs a public https URL, for example a tunnel): either add a webhook pointing at `https://<your-host>/api/webhooks/paypal` with the payment, checkout, invoicing and dispute events and put its id in `PAYPAL_WEBHOOK_ID`, or just set `PUBLIC_BASE_URL` and Nightshift registers it on startup. Without webhooks, the sweep still finds everything every 5 minutes.
 
 **2. Configure and run:**
@@ -151,6 +151,14 @@ npm run dev                    # http://localhost:3000
 npm run seed            # same scenarios, prints the timeline; --reset clears local data first
 ```
 
+If your sandbox app cannot take card payments (PayPal answers `PAYEE_NOT_ENABLED_FOR_CARD_PROCESSING`, as the app used for the live checks did), the lab pays like a PayPal buyer instead: each order is approved on PayPal's sandbox checkout page, as a guest with a freshly generated test card, and then authorized or captured. To do that unattended it needs a headless Chromium:
+
+```bash
+npx playwright-core install chromium   # or point LAB_CHROMIUM_PATH at an existing Chromium
+```
+
+Without one, the lab shows each approve link and waits (`LAB_APPROVAL_TIMEOUT_SECONDS`, default 600) for you to approve it in a browser. A night then takes about three minutes headless; the card-trigger scenario ("Card declined at capture") is skipped. `LAB_PAYMENT_SOURCE` (`auto`, `card`, `paypal`) and `LAB_BUYER_APPROVAL` (`auto`, `headless`, `manual`) override the choice.
+
 Then look at **Tonight**, open an incident, approve the double-charge refund in **Approvals**, and open **Insights**.
 
 Other scripts: `npm test` (vitest), `npm run lint` (route typegen, ESLint and `tsc`), `npm run build`, `npm start`, `npm run worker` (the background loop as its own process, with `WORKER_MODE=external` on the web process).
@@ -168,6 +176,7 @@ src/lib/policy/gate.ts       the policy gate
 src/lib/engine.ts            proposals -> gate -> executor; approvals
 src/lib/executor.ts          money-moving PayPal calls with idempotency keys
 src/lib/scenarios.ts         scenario lab and "Run the night"
+src/lib/sandbox-buyer.ts     the lab's sandbox buyer (headless guest checkout or manual approval)
 src/lib/worker.ts, runner.ts background loop; inline or Render Workflow agent runs
 src/app/                     pages and API routes
 workflows/index.ts           Render Workflows task (TypeScript SDK)
@@ -187,7 +196,7 @@ tests/                       unit, integration and end-to-end tests (PayPal fake
 A hosted sandbox instance on Render will be linked here and on the Devpost page at submission. For judges:
 
 1. Open the hosted URL and read the landing page (30 seconds).
-2. Go to **Scenario lab** → **Run the night**. It creates real sandbox objects; give it about a minute.
+2. Go to **Scenario lab** → **Run the night**. It creates real sandbox objects; give it one to three minutes.
 3. Watch **Tonight** fill up; click any incident for the diagnosis, the policy decision and PayPal's raw response with its `debug_id`.
 4. Open **Approvals** on your phone and approve the double-charge refund.
 5. Open **Insights** and ask the assistant "which incidents cost the most this week?".
@@ -197,10 +206,10 @@ The public demo is rate limited per IP on the lab, AI and approval routes. Set `
 ## Limitations
 
 - **Sandbox only, by design.** Production PayPal is refused at startup. Going live would need real merchant onboarding, PCI scope review (the lab sends raw test card numbers), and real user accounts; the only access control is the optional shared `OWNER_PASSCODE`, and the open demo has none.
-- **No live verification yet.** This build was developed and tested against PayPal's documentation and an in-memory fake of the sandbox API; [PROGRESS.md](PROGRESS.md) lists exactly which live sandbox checks are still open (single-step AUTHORIZE card orders, which mock codes each endpoint honours, reauthorization of card authorizations, invoice create response shape).
-- **The demo clock is Nightshift-only.** With the clock at +5 days, Nightshift may reauthorize an authorization that PayPal knows is minutes old, and PayPal may refuse. Those refusals are shown as they are.
-- **Reauthorization** is documented for PayPal-account payments; card authorizations from the lab will probably be refused (`REAUTHORIZATION_NOT_SUPPORTED_FOR_PAYMENT_SOURCE`). Nightshift then asks the owner.
-- **Declined captures** can only be simulated as error responses (negative testing creates no capture object) or with PayPal's `CCREJECT-*` card-name triggers on immediate-capture orders.
+- **Verified live, with gaps.** The lab, sweep, executor and agent read tools have run against a real sandbox app ([PROGRESS.md](PROGRESS.md) lists each check). Not verified live: card orders (that app had no card processing), webhook delivery (no public URL), Transaction Search returning the lab's own transactions (it lags by hours), a real LLM run (no key).
+- **The lab's headless buyer drives PayPal's sandbox checkout page**, a live web page that PayPal can change at any time. When it fails the lab says so and falls back to an approve link.
+- **The demo clock is Nightshift-only.** With the clock at +5 days, Nightshift tries to reauthorize an authorization that PayPal knows is minutes old, and PayPal refuses with `REAUTHORIZATION_TOO_SOON`. That refusal is shown as it is and the owner is asked; it is the demo's "escalate instead of retry" moment.
+- **Declined captures** can only be simulated as error responses (negative testing creates no capture object) or with PayPal's `CCREJECT-*` card-name triggers on immediate-capture card orders.
 - **Fulfilment state** (shipped or not) does not exist in PayPal for authorize-then-capture orders. Nightshift keeps it in its ledger; a real shop would send it via `POST /api/ingest/orders` or mark orders shipped in the Ledger page.
 - **No order list endpoint** exists in PayPal, so Nightshift only sees orders it is told about, gets webhooks for, or finds through Transaction Search (which can lag up to 3 hours).
 - **Disputes** have a detector but the lab cannot create disputes through the API.
@@ -218,6 +227,7 @@ Libraries (licence):
 - [PayPal Agent Toolkit](https://github.com/paypal/agent-toolkit) `@paypal/agent-toolkit` (ISC per npm; the GitHub repository states Apache-2.0)
 - [Render SDK](https://github.com/render-oss/sdk) `@renderinc/sdk` (MIT)
 - [zod](https://zod.dev) (MIT), [tsx](https://tsx.is) (MIT), [Vitest](https://vitest.dev) (MIT), [ESLint](https://eslint.org) and `eslint-config-next` (MIT)
+- [Playwright](https://playwright.dev) `playwright-core` (Apache-2.0): the scenario lab's headless sandbox buyer
 - Node.js built-in [`node:sqlite`](https://nodejs.org/api/sqlite.html) (MIT, part of Node.js)
 
 Documentation and services used while building:
