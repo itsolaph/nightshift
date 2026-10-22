@@ -29,3 +29,25 @@ One line per milestone: what is done, test status, what is blocked.
 10. Agent Toolkit read tools against the sandbox (`get_order`, `get_invoice`, `list_transactions`, `get_refund`, `list_disputes`) and a real LLM run through OpenRouter (agent loop and the AG Studio assistant via `/api/ai`).
 
 **Open items:** deploy the Render Blueprint (web + disk, sweep cron, agent workflow) and add the hosted URL to the README; disputes cannot be seeded via the API; no Postgres option; Telegram flow untested against the real Bot API.
+
+## Live sandbox pass (2026-10-22)
+
+Sandbox credentials arrived; every "live checks still to run" item above was run against a real sandbox REST app (Invoicing, Transaction Search, webhooks and disputes scopes, **no card processing**). Findings with debug ids are in [docs/PAYPAL-NOTES.md](docs/PAYPAL-NOTES.md). `npm test` (130 tests), `npm run lint`, `npm run build` green.
+
+| # | Check | Result |
+|---|---|---|
+| 1 | Single-step card order, AUTHORIZE and CAPTURE | **fixed**: 422 `PAYEE_NOT_ENABLED_FOR_CARD_PROCESSING` on this app. The lab now tries one card order, then pays through PayPal checkout: `payment_source.paypal` order (200 `PAYER_ACTION_REQUIRED`, `rel: payer-action`), approved by a headless sandbox guest buyer (playwright-core, optional) or by hand via a link in the lab, then authorized or captured. Card success path **still mocked** |
+| 2 | Two-step card flow | **fixed**: same refusal, same fallback. Two-step with PayPal-wallet orders (create, approve, `/authorize` or `/capture`) **live-pass**, incl. same-id replay (200) and `ORDER_ALREADY_AUTHORIZED` |
+| 3 | `INSTRUMENT_DECLINED` mock on authorization capture | **fixed**: the sandbox ignores it there (403, empty body); `PAYER_CANNOT_PAY` gives a proper 422, now used. Mocks on Orders endpoints honour `INSTRUMENT_DECLINED`. Empty error bodies are described as such |
+| 4 | `CCREJECT-IF` card name on a CAPTURE order | **still mocked**: needs card processing; the scenario is skipped (and says why) on apps without it |
+| 5 | Reauthorize a fresh authorization | **live-pass**: 422 `REAUTHORIZATION_TOO_SOON` (PayPal-wallet authorization); executor escalates to the owner. Test fake updated. Card variant unverified |
+| 6 | Two refunds with different ids, replay with the same id | **live-pass**: both refunds succeed; replay returns 200 with the first refund, nothing new |
+| 7 | Invoicing | **fixed / live-pass**: create returns the full invoice (201); back-dated invoices accepted (lab invoices are now overdue for real); partial payment works even without `allow_partial_payment`; full external payment is `MARKED_AS_PAID`; remind returns 200 `{id}`, not 204, and was not rate limited; `generate-next-invoice-number` needs a JSON body (415) |
+| 8 | Transaction Search, balances | **live-pass** for the call and the 31-day limit; data lags in steps (`last_refreshed_datetime` 1.5 to 3+ h behind). **Fixed**: balances answers 404 on this account, now "no report" instead of a sweep error every 5 minutes. The 403-without-feature case not checked (feature on) |
+| 9 | Webhooks | **live-pass** for create (all 17 event names valid), list, duplicate-URL error, delete, and verify-webhook-signature returning `FAILURE` for forged headers. Real delivery **skipped**: no public https URL |
+| 10 | Agent Toolkit read tools and LLM | **live-pass**: `get_order`, `get_refund`, `get_invoice`, `list_transactions`, `list_disputes` via the toolkit, `get_authorization`/`get_capture` via REST. LLM **still mocked**: no `LLM_API_KEY` in the environment, so triage ran rule-based (labelled) and `/api/ai` answers 503 "assistant is off" |
+| - | Timestamps | **fixed**: refunds and voids come back as `-07:00` offsets, captures as `Z`; detectors compared strings. Normalised to UTC on ingest |
+| - | `npm run seed -- --reset` | **live-pass**: 9 scenarios, 8 ok, 1 skipped (card trigger), about 3 minutes; 9 incidents, $71 captured automatically, refund approval, reauthorize refused and escalated, duplicate charge matched by the same buyer |
+| - | "Run the night" in the web app (`npm start`) | **live-pass**: same result with the headless buyer running inside the Next.js server; double-charge refund approved through `/api/actions/{id}` (201 `COMPLETED`, derived idempotency key), second approval refused; manual sweep clean (no errors) |
+
+**Still open:** card-processing path and `CCREJECT` triggers on an app with advanced card payments; webhook delivery with a public URL (deploy or tunnel); a real LLM run (agent loop and AG Studio assistant) with `LLM_API_KEY`; sweep discovery through Transaction Search once the sandbox's reporting data catches up; the headless buyer depends on PayPal's checkout page layout (falls back to the manual link); Render deploy; disputes cannot be seeded; Telegram untested against the real Bot API.
