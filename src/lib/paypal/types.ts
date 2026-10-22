@@ -40,10 +40,21 @@ export type PurchaseUnitRequest = {
   items?: { name: string; quantity: string; unit_amount: Amount; sku?: string }[];
 };
 
+/** A PayPal-wallet payment source: the buyer approves on PayPal's checkout page (rel "payer-action"). */
+export type PayPalWalletSource = {
+  experience_context?: {
+    brand_name?: string;
+    user_action?: "CONTINUE" | "PAY_NOW";
+    shipping_preference?: "GET_FROM_FILE" | "NO_SHIPPING" | "SET_PROVIDED_ADDRESS";
+    return_url?: string;
+    cancel_url?: string;
+  };
+};
+
 export type CreateOrderRequest = {
   intent: "AUTHORIZE" | "CAPTURE";
   purchase_units: PurchaseUnitRequest[];
-  payment_source?: { card?: CardSource };
+  payment_source?: { card?: CardSource; paypal?: PayPalWalletSource };
 };
 
 export type Authorization = {

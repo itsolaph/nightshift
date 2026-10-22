@@ -25,6 +25,7 @@
     "ag-studio": "^3.0.0",
     "ag-studio-react": "^3.0.0",
     "next": "^16.4.2",
+    "playwright-core": "^1.64.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "tsx": "^4.23.15",

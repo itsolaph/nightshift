@@ -1,7 +1,7 @@
 import { connection } from "next/server";
 import { store } from "@/lib/db";
 import { config } from "@/lib/config";
-import { labRunning, SCENARIOS } from "@/lib/scenarios";
+import { labRunning, pendingApproval, SCENARIOS } from "@/lib/scenarios";
 import { LabPanel } from "@/components/lab-panel";
 import { EventItem } from "@/components/event-item";
 
@@ -11,6 +11,8 @@ export default async function LabPage() {
   await connection();
   const s = store();
   const running = labRunning(s);
+  const approval = running ? pendingApproval(s) : null;
+  const cardsRefused = Boolean(s.getKv<boolean>("lab:cardsRefused"));
   const log = s
     .recentEvents(300)
     .filter((e) => e.actor === "lab" || e.kind === "detected" || e.kind === "outcome" || e.kind === "policy")
@@ -24,7 +26,7 @@ export default async function LabPage() {
           <div className="eyebrow">Scenario lab, sandbox only</div>
           <h1>Make the problems happen, for real</h1>
           <p>
-            Nobody should have to wait 29 days to see this work. The lab creates real PayPal sandbox objects (card orders, failed captures via negative testing, double refunds, overdue invoices) and
+            Nobody should have to wait 29 days to see this work. The lab creates real PayPal sandbox objects (paid orders, failed captures via negative testing, double refunds, overdue invoices) and
             then gets out of the way: the same watcher, detectors, agent and policy gate that run in production take it from there.
           </p>
         </div>
@@ -32,6 +34,21 @@ export default async function LabPage() {
       <div className="banner" style={{ marginBottom: 16 }}>
         Sandbox only. The demo clock moves Nightshift&apos;s detector clock, never PayPal&apos;s. A capture or reauthorization is a real sandbox call, so PayPal may answer differently from what the detector clock suggests (for example, refusing to reauthorize an authorization that is really minutes old). Those answers are recorded as they are.
       </div>
+      {cardsRefused ? (
+        <div className="banner info" style={{ marginBottom: 16 }}>
+          This sandbox app cannot take card payments directly, so the lab pays through PayPal checkout: a sandbox buyer approves each order on PayPal&apos;s page (guest checkout with a test
+          card), then the shop authorizes or captures it. The card-trigger scenario is skipped.
+        </div>
+      ) : null}
+      {approval ? (
+        <div className="banner" style={{ marginBottom: 16 }}>
+          Waiting for a buyer to approve order <code>{approval.orderId}</code>.{" "}
+          <a href={approval.url} target="_blank" rel="noreferrer">
+            Open PayPal sandbox checkout
+          </a>{" "}
+          and pay as a guest with any sandbox test card, or log in with a sandbox personal account.
+        </div>
+      ) : null}
       {!cfg.paypal.configured ? (
         <div className="banner bad" style={{ marginBottom: 16 }}>
           PayPal sandbox credentials are missing, so the lab is disabled. Set PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET in .env.local.

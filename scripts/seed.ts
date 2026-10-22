@@ -41,7 +41,7 @@ async function main() {
   for (const e of s.eventsSince(seq, 500)) console.log(`${e.at.slice(11, 19)}  ${e.actor.padEnd(8)}  ${e.title}`);
 
   const stats = summary(s);
-  console.log("\nScenarios:", Object.entries(outcome).map(([k, ok]) => `${ok ? "ok" : "FAILED"} ${k}`).join(", "));
+  console.log("\nScenarios:", Object.entries(outcome).map(([k, result]) => `${result === "failed" ? "FAILED" : result} ${k}`).join(", "));
   console.log(
     `Incidents: ${stats.incidents}, protected ${formatMoney(stats.savedCents)}, at risk ${formatMoney(stats.atRiskCents)}, waiting for approval ${stats.awaitingApproval}.`,
   );

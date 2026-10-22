@@ -5,8 +5,7 @@ import { z } from "zod";
 import { store } from "@/lib/db";
 import { jsonError, rateLimit, readJson } from "@/lib/http";
 import { paypal } from "@/lib/paypal/client";
-import { labLogger, labRunning, runScenario, runTheNight, scenarioById } from "@/lib/scenarios";
-import { detectAndTriage } from "@/lib/worker";
+import { labLogger, labRunning, runSingleScenario, runTheNight, scenarioById } from "@/lib/scenarios";
 
 export const dynamic = "force-dynamic";
 
@@ -31,23 +30,6 @@ export async function POST(request: Request) {
   }
   const scenario = scenarioById(parsed.data.scenario);
   if (!scenario) return jsonError(404, "Unknown scenario");
-  void (async () => {
-    const log = labLogger(s, runId);
-    s.setKv("lab:running", { runId, startedAt: new Date().toISOString() });
-    try {
-      const ok = await runScenario({ store: s, client, log, runId }, scenario);
-      const settings = s.settings();
-      if (ok && settings.demoClockOffsetDays < scenario.clockDays) {
-        s.saveSettings({ demoClockOffsetDays: scenario.clockDays });
-        log(`Demo clock moved to +${scenario.clockDays} days so the detectors can see this scenario`);
-      }
-      const triaged = await detectAndTriage(s);
-      log(`Watcher ran; ${triaged} incident(s) triaged`);
-    } catch (error) {
-      log(`Scenario failed: ${String(error)}`);
-    } finally {
-      s.setKv("lab:running", null);
-    }
-  })();
+  void runSingleScenario(s, client, scenario, runId).catch((error) => labLogger(s, runId)(`Scenario failed: ${String(error)}`));
   return Response.json({ runId, started: scenario.id }, { status: 202 });
 }

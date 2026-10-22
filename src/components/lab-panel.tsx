@@ -47,7 +47,8 @@ export function LabPanel({ scenarios, running, paypal }: { scenarios: ScenarioIn
             <h2>Run the night</h2>
             <p className="muted" style={{ marginTop: 6 }}>
               Creates real sandbox orders, captures, refunds and invoices, moves the demo clock forward in three steps (+1, +5, +27 days) and lets the watcher, the agent and the policy gate handle each step.
-              Expect a few auto-fixes, a couple of refusals from PayPal, and at least one decision waiting in Approvals. Takes about a minute.
+              Expect a few auto-fixes, a couple of refusals from PayPal, and at least one decision waiting in Approvals. Takes about a minute with card payments, a few minutes when a
+              sandbox buyer has to approve each order on PayPal&apos;s checkout page.
             </p>
           </div>
           <div className="row">

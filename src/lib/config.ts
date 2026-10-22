@@ -26,6 +26,14 @@ export type AppConfig = {
   databasePath: string;
   workerMode: "inline" | "external" | "off";
   cronSecret: string;
+  lab: {
+    /** auto: card orders first, PayPal checkout once the sandbox app refuses cards. */
+    paymentSource: "auto" | "card" | "paypal";
+    /** auto: headless guest checkout when playwright-core and Chromium are there, else manual. */
+    buyerApproval: "auto" | "headless" | "manual";
+    chromiumPath: string;
+    approvalTimeoutMs: number;
+  };
 };
 
 export const DEFAULT_LLM_BASE_URL = "https://openrouter.ai/api/v1";
@@ -49,6 +57,12 @@ export function assertSandboxOnly(env: Record<string, string | undefined> = proc
   const base = env.PAYPAL_API_BASE?.trim();
   if (base && base !== SANDBOX_API_BASE) throw new LiveEnvironmentRefused();
 }
+
+/** The value if it is one of `options` (case-insensitive), else the first option. */
+const oneOf = <T extends string>(value: string | undefined, options: readonly T[]): T => {
+  const v = value?.trim().toLowerCase();
+  return options.find((o) => o === v) ?? options[0];
+};
 
 const list = (value: string | undefined) =>
   (value ?? "")
@@ -94,6 +108,12 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     databasePath: env.DATABASE_PATH?.trim() || "data/nightshift.db",
     workerMode: ["inline", "external", "off"].includes(workerMode) ? workerMode : "inline",
     cronSecret: env.CRON_SECRET?.trim() ?? "",
+    lab: {
+      paymentSource: oneOf(env.LAB_PAYMENT_SOURCE, ["auto", "card", "paypal"] as const),
+      buyerApproval: oneOf(env.LAB_BUYER_APPROVAL, ["auto", "headless", "manual"] as const),
+      chromiumPath: env.LAB_CHROMIUM_PATH?.trim() ?? "",
+      approvalTimeoutMs: (Number(env.LAB_APPROVAL_TIMEOUT_SECONDS) > 0 ? Number(env.LAB_APPROVAL_TIMEOUT_SECONDS) : 600) * 1000,
+    },
   };
 }
 

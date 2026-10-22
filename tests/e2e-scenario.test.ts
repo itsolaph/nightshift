@@ -130,7 +130,7 @@ describe("run the night (fake sandbox)", () => {
     const declined = byType("capture_failed").find((i) => i.subject?.kind === "authorization")!;
     const captureCalls = fake.requests.filter((r) => r.path === `/v2/payments/authorizations/${declined.subject!.id}/capture`);
     expect(captureCalls).toHaveLength(1); // only the shop's original, mocked-to-fail attempt
-    expect(captureCalls[0].headers["paypal-mock-response"]).toContain("INSTRUMENT_DECLINED");
+    expect(captureCalls[0].headers["paypal-mock-response"]).toContain("PAYER_CANNOT_PAY");
   });
 
   it("writes the full audit trail: detected, diagnosis, proposal, policy, PayPal call and response", () => {
