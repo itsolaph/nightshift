@@ -47,7 +47,7 @@ export async function processProposals(
     const status: ActionRecord["status"] =
       gate.decision === "auto" ? "approved" : gate.decision === "needs_approval" ? "awaiting_approval" : "blocked";
     const record = store.insertAction({
-      id: `act_${randomUUID().slice(0, 12)}`,
+      id: `act_${randomUUID().replaceAll("-", "").slice(0, 12)}`,
       incidentId: incident.id,
       type: gate.action.type,
       targetId: gate.action.targetId,
@@ -114,7 +114,7 @@ export function settleIncident(store: Store, incidentId: string): Incident | nul
     if (!store.findActionByKey(key)) {
       const at = new Date().toISOString();
       store.insertAction({
-        id: `act_${randomUUID().slice(0, 12)}`,
+        id: `act_${randomUUID().replaceAll("-", "").slice(0, 12)}`,
         incidentId,
         type: "ask_owner",
         targetId: null,

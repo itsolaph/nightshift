@@ -57,6 +57,8 @@ export type LedgerRefund = {
   currency: string;
   createdAt: string;
   updatedAt: string;
+  /** Set when Nightshift's executor issued the refund to fix an incident. */
+  issuedBy?: "nightshift";
 };
 
 export type LedgerInvoice = {

@@ -90,11 +90,13 @@ export function detectRefundAnomalies(ledger: Ledger, _now: Date, settings: Sett
   }
 
   // Refund spike: anchored on the latest refund rather than "now", so the demo clock offset
-  // doesn't push every refund out of the window.
-  if (live.length >= settings.refundSpikeMinCount) {
-    const latest = live.map((r) => new Date(r.createdAt).getTime()).reduce((a, b) => Math.max(a, b), 0);
+  // doesn't push every refund out of the window. Refunds Nightshift issued to fix an incident
+  // (a double charge) are not a sign of a bad batch and don't count.
+  const external = live.filter((r) => r.issuedBy !== "nightshift");
+  if (external.length >= settings.refundSpikeMinCount) {
+    const latest = external.map((r) => new Date(r.createdAt).getTime()).reduce((a, b) => Math.max(a, b), 0);
     const from = latest - 24 * HOUR_MS;
-    const inWindow = live.filter((r) => new Date(r.createdAt).getTime() >= from);
+    const inWindow = external.filter((r) => new Date(r.createdAt).getTime() >= from);
     const captures = ledger.captures.filter(
       (c) => SETTLED_CAPTURE_STATUSES.has(c.status) && new Date(c.createdAt).getTime() >= from,
     );

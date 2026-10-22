@@ -165,7 +165,7 @@ export class Store {
     const now = nowIso();
     const incident: Incident = {
       ...draft,
-      id: `inc_${randomUUID().slice(0, 12)}`,
+      id: `inc_${randomUUID().replaceAll("-", "").slice(0, 12)}`,
       status: "open",
       savedCents: 0,
       detectedAt,

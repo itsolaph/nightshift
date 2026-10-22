@@ -121,6 +121,7 @@ export function ingestRefund(store: Store, refund: T.Refund, orderId?: string, c
     currency: refund.amount?.currency_code ?? "USD",
     createdAt: refund.create_time ?? existing?.createdAt ?? now(),
     updatedAt: now(),
+    ...(existing?.issuedBy ? { issuedBy: existing.issuedBy } : {}),
   };
   store.putLedger("refund", row);
   return row;
@@ -175,7 +176,7 @@ export function recordCaptureAttempt(
 ): CaptureAttempt {
   const error = args.result.ok ? null : describeError(args.result.body);
   const attempt: CaptureAttempt = {
-    id: `att_${randomUUID().slice(0, 12)}`,
+    id: `att_${randomUUID().replaceAll("-", "").slice(0, 12)}`,
     orderId: args.orderId,
     authorizationId: args.authorizationId,
     at: now(),
@@ -216,7 +217,7 @@ export function applyPayPalResult(store: Store, actionType: string, targetId: st
     case "refund_capture": {
       const refund = body as T.Refund;
       const capture = store.getLedger("capture", targetId);
-      if (refund?.id) ingestRefund(store, refund, capture?.orderId, targetId);
+      if (refund?.id) store.putLedger("refund", { ...ingestRefund(store, refund, capture?.orderId, targetId), issuedBy: "nightshift" });
       break;
     }
     case "send_invoice_reminder": {
