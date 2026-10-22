@@ -43,6 +43,26 @@ export class FakePayPal {
     return json(result.status, result.body);
   };
 
+  /** Authorizes or captures an order with a card, like the sandbox does for card payment sources. */
+  private pay(order: Rec, card: Rec, now: string) {
+    const unit = (order.purchase_units as Rec[])[0];
+    const amount = unit.amount as Rec;
+    const id = order.id as string;
+    order.status = "COMPLETED";
+    order.payment_source = { card: { name: card.name, last_digits: String(card.number).slice(-4), brand: "VISA" } };
+    const payments = unit.payments as Rec;
+    if (order.intent === "AUTHORIZE") {
+      const auth = { id: pid("A"), status: "CREATED", amount, create_time: now, expiration_time: new Date(Date.now() + 29 * 864e5).toISOString(), supplementary_data: { related_ids: { order_id: id } } };
+      this.authorizations.set(auth.id, auth);
+      payments.authorizations = [auth];
+    } else {
+      const declined = String(card.name).startsWith("CCREJECT");
+      const cap = { id: pid("C"), status: declined ? "DECLINED" : "COMPLETED", amount, final_capture: true, create_time: now, supplementary_data: { related_ids: { order_id: id } } };
+      this.captures.set(cap.id, cap);
+      payments.captures = [cap];
+    }
+  }
+
   private route(method: string, url: URL, body: Rec): { status: number; body: unknown } {
     const p = url.pathname;
     const now = new Date().toISOString();
@@ -50,29 +70,26 @@ export class FakePayPal {
 
     if (method === "POST" && p === "/v2/checkout/orders") {
       const unit = (body.purchase_units as Rec[])[0];
-      const amount = unit.amount as Rec;
-      const card = (body.payment_source as Rec)?.card as Rec;
       const id = pid("O");
       const order: Rec = {
         id,
         intent: body.intent,
-        status: "COMPLETED",
+        status: "CREATED",
         create_time: now,
-        payment_source: { card: { name: card.name, last_digits: String(card.number).slice(-4), brand: "VISA" } },
-        purchase_units: [{ reference_id: "default", custom_id: unit.custom_id, description: unit.description, amount, payments: {} }],
+        purchase_units: [{ reference_id: "default", custom_id: unit.custom_id, description: unit.description, amount: unit.amount, payments: {} }],
       };
-      const payments = (order.purchase_units as Rec[])[0].payments as Rec;
-      if (body.intent === "AUTHORIZE") {
-        const auth = { id: pid("A"), status: "CREATED", amount, create_time: now, expiration_time: new Date(Date.now() + 29 * 864e5).toISOString(), supplementary_data: { related_ids: { order_id: id } } };
-        this.authorizations.set(auth.id, auth);
-        payments.authorizations = [auth];
-      } else {
-        const declined = String(card.name).startsWith("CCREJECT");
-        const cap = { id: pid("C"), status: declined ? "DECLINED" : "COMPLETED", amount, final_capture: true, create_time: now, supplementary_data: { related_ids: { order_id: id } } };
-        this.captures.set(cap.id, cap);
-        payments.captures = [cap];
-      }
       this.orders.set(id, order);
+      const card = (body.payment_source as Rec)?.card as Rec | undefined;
+      if (card) this.pay(order, card, now);
+      return { status: 201, body: order };
+    }
+    if (method === "POST" && (m = p.match(/^\/v2\/checkout\/orders\/([^/]+)\/(authorize|capture)$/))) {
+      const order = this.orders.get(m[1]);
+      if (!order) return error(404, "RESOURCE_NOT_FOUND", "INVALID_RESOURCE_ID");
+      if ((m[2] === "authorize") !== (order.intent === "AUTHORIZE")) return error(422, "UNPROCESSABLE_ENTITY", "ACTION_DOES_NOT_MATCH_INTENT");
+      const card = (body?.payment_source as Rec)?.card as Rec | undefined;
+      if (!card) return error(422, "UNPROCESSABLE_ENTITY", "ORDER_NOT_APPROVED");
+      this.pay(order, card, now);
       return { status: 201, body: order };
     }
     if (method === "GET" && (m = p.match(/^\/v2\/checkout\/orders\/([^/]+)$/))) {

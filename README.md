@@ -92,6 +92,7 @@ All calls go to `api-m.sandbox.paypal.com`; the app refuses to start with `PAYPA
 |---|---|
 | `POST /v1/oauth2/token` | Client-credentials token, cached and refreshed |
 | `POST /v2/checkout/orders` (`intent: AUTHORIZE` and `CAPTURE`, `payment_source.card`) | Scenario lab: real sandbox orders without a buyer approval step |
+| `POST /v2/checkout/orders/{id}/authorize`, `.../capture` (with `payment_source.card`) | Scenario lab: the documented two-step card flow for the pre-order and refund scenarios, falling back to single-step if refused |
 | `GET /v2/checkout/orders/{id}` | Sweep and webhooks: refresh an order with its authorizations, captures and refunds; agent read tool (via Agent Toolkit) |
 | `GET /v2/payments/authorizations/{id}` | Agent read tool; webhook linking |
 | `POST /v2/payments/authorizations/{id}/capture` | Executor: capture a shipped order. Scenario lab: the shop's capture, failed with negative testing |

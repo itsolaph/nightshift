@@ -53,10 +53,27 @@ type CardOrder = {
   description: string;
   cardName: string;
   card?: string;
+  /** Create the order without a payment source, then POST .../authorize or .../capture with the card. */
+  twoStep?: boolean;
 };
 
 /** Single-step card order: with payment_source.card PayPal authorizes or captures in one call, no buyer approval. */
 async function cardOrder(ctx: ScenarioContext, o: CardOrder, meta: Parameters<typeof ingestOrder>[2] = {}) {
+  const paymentSource: T.CreateOrderRequest["payment_source"] = {
+    card: {
+      number: o.card ?? TEST_CARDS.visa,
+      expiry: "2030-12",
+      security_code: "123",
+      name: o.cardName,
+      billing_address: {
+        address_line_1: "100 Market St",
+        admin_area_2: "San Jose",
+        admin_area_1: "CA",
+        postal_code: "95131",
+        country_code: "US",
+      },
+    },
+  };
   const body: T.CreateOrderRequest = {
     intent: o.intent,
     purchase_units: [
@@ -68,23 +85,23 @@ async function cardOrder(ctx: ScenarioContext, o: CardOrder, meta: Parameters<ty
         amount: paypalAmount(o.cents, "USD"),
       },
     ],
-    payment_source: {
-      card: {
-        number: o.card ?? TEST_CARDS.visa,
-        expiry: "2030-12",
-        security_code: "123",
-        name: o.cardName,
-        billing_address: {
-          address_line_1: "100 Market St",
-          admin_area_2: "San Jose",
-          admin_area_1: "CA",
-          postal_code: "95131",
-          country_code: "US",
-        },
-      },
-    },
+    payment_source: paymentSource,
   };
-  const result = await ctx.client.createOrder(body, { requestId: randomUUID() });
+  let result: PayPalResult<T.Order> | null = null;
+  if (o.twoStep) {
+    const created = await ctx.client.createOrder({ ...body, payment_source: undefined }, { requestId: randomUUID() });
+    if (created.ok) {
+      const step = o.intent === "AUTHORIZE" ? ctx.client.authorizeOrder.bind(ctx.client) : ctx.client.captureOrder.bind(ctx.client);
+      const finished = await step(created.body.id, { payment_source: paymentSource }, { requestId: randomUUID() });
+      if (finished.ok) {
+        ctx.log(`Two-step flow: created order ${created.body.id}, then ${o.intent === "AUTHORIZE" ? "authorized" : "captured"} it with the card`, { debugId: finished.debugId });
+        result = finished;
+      } else {
+        ctx.log(`Two-step ${o.intent.toLowerCase()} refused (HTTP ${finished.status} ${describeError(finished.body).message}); falling back to the single-step card order`, { body: finished.body });
+      }
+    }
+  }
+  result ??= await ctx.client.createOrder(body, { requestId: randomUUID() });
   const order = check(`order create (${o.intent} ${formatMoney(o.cents)})`, result, ctx.log);
   if (order.status !== "COMPLETED") {
     ctx.log(`Order ${order.id} came back ${order.status}, not COMPLETED. Card payments may need "Advanced Credit and Debit Card Payments" enabled on the sandbox app.`, order);
@@ -191,6 +208,7 @@ export const SCENARIOS: Scenario[] = [
         cartRef: cart(),
         description: "Espresso sampler, 4 x 250g",
         cardName: "Sandbox Buyer D",
+        twoStep: true,
       });
       if (!capture) throw new SeedError("No capture on the order");
       for (let i = 0; i < 2; i++) {
@@ -280,6 +298,7 @@ export const SCENARIOS: Scenario[] = [
         cartRef: cart(),
         description: "Pre-order: holiday blend, ships next week",
         cardName: "Sandbox Buyer F",
+        twoStep: true,
       });
     },
   },

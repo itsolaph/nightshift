@@ -18,6 +18,7 @@ Source: Orders v2 schema; [Orders advanced use cases](https://developer.paypal.c
 - Send `PayPal-Request-Id` whenever `payment_source` is in the create call; the errors page lists `PAYPAL_REQUEST_ID_REQUIRED` for that case. The scenario lab always sends one. (docs)
 - Card payments may require "Advanced Credit and Debit Card Payments" on the sandbox app. If an order comes back in another status, the lab logs it instead of pretending. (unverified)
 - Sandbox decline triggers: put `CCREJECT-*` in the card holder name (for example `CCREJECT-IF`, insufficient funds) with Visa 4012888888881881. With CAPTURE intent the order completes but `captures[0].status` is `DECLINED`. Nightshift's "Card declined at capture" scenario uses this. (docs; AUTHORIZE behaviour unverified)
+- Two-step alternative: create the order without `payment_source`, then `POST /v2/checkout/orders/{id}/authorize` (or `/capture`) with `payment_source.card` in the body. The lab uses it for two scenarios and falls back to single-step if PayPal refuses. (docs; unverified live)
 - `Prefer: return=representation` returns the full resource on create, authorize and capture. Nightshift always sends it. (docs)
 - Order statuses: `CREATED`, `SAVED`, `APPROVED`, `VOIDED`, `COMPLETED`, `PAYER_ACTION_REQUIRED`. (docs)
 - PayPal has no endpoint to list orders. Orders enter Nightshift's ledger from the shop (`POST /api/ingest/orders`), from webhooks, from Transaction Search, or from the scenario lab. (docs)

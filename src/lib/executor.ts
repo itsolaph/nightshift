@@ -9,6 +9,7 @@ import type { ActionRecord, Incident } from "./domain";
 import { applyPayPalResult, recordCaptureAttempt } from "./ledger";
 import { describeError, type PayPalClient } from "./paypal/client";
 import { formatMoney } from "./money";
+import { notifyApprovalNeeded } from "./telegram";
 
 /** Deterministic PayPal-Request-Id for an action. Same incident + action + target + amount = same key. */
 export function idempotencyKey(
@@ -152,7 +153,7 @@ function escalateAfterFailure(store: Store, incident: Incident, failed: ActionRe
   const key = idempotencyKey(incident.id, "ask_owner", failed.id, null);
   if (!store.findActionByKey(key)) {
     const now = new Date().toISOString();
-    store.insertAction({
+    const question = store.insertAction({
       id: `act_${key.slice(-12)}`,
       incidentId: incident.id,
       type: "ask_owner",
@@ -172,6 +173,7 @@ function escalateAfterFailure(store: Store, incident: Incident, failed: ActionRe
       updatedAt: now,
       decidedBy: null,
     });
+    void notifyApprovalNeeded(store, question);
   }
   store.updateIncident(incident.id, { status: "awaiting_approval" });
   store.addEvent({

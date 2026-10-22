@@ -112,6 +112,17 @@ describe("run the night (fake sandbox)", () => {
     }
   });
 
+  it("uses the two-step Orders flow (create, then authorize or capture with the card) for two scenarios", () => {
+    const authorize = fake.requests.filter((r) => /\/v2\/checkout\/orders\/[^/]+\/authorize$/.test(r.path));
+    const capture = fake.requests.filter((r) => /\/v2\/checkout\/orders\/[^/]+\/capture$/.test(r.path));
+    expect(authorize).toHaveLength(1);
+    expect(capture).toHaveLength(1);
+    for (const r of [...authorize, ...capture]) {
+      expect((r.body as { payment_source?: unknown }).payment_source).toBeTruthy();
+      expect(r.headers["paypal-request-id"]).toBeTruthy();
+    }
+  });
+
   it("never sends a money-moving POST without a PayPal-Request-Id, and never retries a declined capture on its own", () => {
     const money = fake.requests.filter((r) => r.method === "POST" && /\/v2\/payments\//.test(r.path));
     expect(money.length).toBeGreaterThan(0);

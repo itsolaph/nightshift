@@ -169,11 +169,12 @@ export class PayPalClient {
   getOrder(id: string) {
     return this.request<T.Order>("GET", `/v2/checkout/orders/${encodeURIComponent(id)}`);
   }
-  authorizeOrder(id: string, opts: RequestOptions = {}) {
-    return this.request<T.Order>("POST", `/v2/checkout/orders/${encodeURIComponent(id)}/authorize`, { ...opts, body: {} });
+  /** `body` may carry `payment_source` (two-step card flow: create without it, then authorize with it). */
+  authorizeOrder(id: string, body: { payment_source?: T.CreateOrderRequest["payment_source"] } = {}, opts: RequestOptions = {}) {
+    return this.request<T.Order>("POST", `/v2/checkout/orders/${encodeURIComponent(id)}/authorize`, { ...opts, body });
   }
-  captureOrder(id: string, opts: RequestOptions = {}) {
-    return this.request<T.Order>("POST", `/v2/checkout/orders/${encodeURIComponent(id)}/capture`, { ...opts, body: {} });
+  captureOrder(id: string, body: { payment_source?: T.CreateOrderRequest["payment_source"] } = {}, opts: RequestOptions = {}) {
+    return this.request<T.Order>("POST", `/v2/checkout/orders/${encodeURIComponent(id)}/capture`, { ...opts, body });
   }
 
   // --- Payments v2 --------------------------------------------------------------------
