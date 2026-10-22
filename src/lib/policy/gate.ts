@@ -83,7 +83,7 @@ function validAmount(amount: number | null | undefined): amount is number {
 }
 
 export function evaluate(input: GateInput): GateResult {
-  const { proposal, incident, ledger, settings, now } = input;
+  const { proposal, incident, settings } = input;
   const type = proposal.type;
 
   if (!isActionType(type)) return forbidden(input, [`"${type}" is not on the action allowlist.`]);
@@ -110,7 +110,6 @@ export function evaluate(input: GateInput): GateResult {
     result.reasons.push("Autopilot is off, so every action waits for the owner.");
   }
   if (result.decision === "auto") result.reasons.unshift("Within the autopilot rules.");
-  void now;
   return result;
 }
 

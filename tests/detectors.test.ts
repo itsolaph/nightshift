@@ -238,8 +238,8 @@ describe("overdue invoices and disputes", () => {
         invoice({ id: "INV2-DRAFT", number: "NS-0004", status: "DRAFT" }),
       ],
     };
-    expect(detectOverdueInvoices(ledger, new Date("2026-10-15T20:00:00Z"), settings())).toEqual([]);
-    const drafts = detectOverdueInvoices(ledger, new Date("2026-10-20T08:00:00Z"), settings());
+    expect(detectOverdueInvoices(ledger, new Date("2026-10-15T20:00:00Z"))).toEqual([]);
+    const drafts = detectOverdueInvoices(ledger, new Date("2026-10-20T08:00:00Z"));
     expect(drafts.map((d) => d.subject?.id)).toEqual(["INV2-Z56S-5LLA-Q52L-CPZ5", "INV2-PART"]);
     expect(drafts[1].atRiskCents).toBe(10000);
     expect(drafts[0].evidence.facts.days_overdue).toBe(5);

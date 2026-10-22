@@ -4,14 +4,14 @@
 //   dispute_deadline  a dispute waits for the seller and the response deadline is close
 
 import { DAY_MS } from "../clock";
-import type { IncidentDraft, Ledger, Settings } from "../domain";
+import type { IncidentDraft, Ledger } from "../domain";
 import { formatMoney } from "../money";
 
 export const REMINDABLE_INVOICE_STATUSES = new Set(["SENT", "UNPAID", "PARTIALLY_PAID"]);
 const DISPUTE_WARNING_DAYS = 3;
 const OPEN_DISPUTE_STATUSES = new Set(["OPEN", "WAITING_FOR_SELLER_RESPONSE"]);
 
-export function detectOverdueInvoices(ledger: Ledger, now: Date, _settings: Settings): IncidentDraft[] {
+export function detectOverdueInvoices(ledger: Ledger, now: Date): IncidentDraft[] {
   const today = now.toISOString().slice(0, 10);
   const drafts: IncidentDraft[] = [];
   for (const invoice of ledger.invoices) {
