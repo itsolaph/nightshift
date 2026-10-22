@@ -3,7 +3,8 @@
 
 export function clientIp(request: Request): string {
   const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0].trim();
+  // The rightmost entry is the one the hosting proxy appended; the left ones are client-supplied.
+  if (forwarded) return forwarded.split(",").at(-1)!.trim();
   return request.headers.get("x-real-ip") ?? "local";
 }
 

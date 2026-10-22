@@ -192,11 +192,11 @@ A hosted sandbox instance on Render will be linked here and on the Devpost page 
 4. Open **Approvals** on your phone and approve the double-charge refund.
 5. Open **Insights** and ask the assistant "which incidents cost the most this week?".
 
-The public demo is rate limited per IP on the lab and AI routes. Every PayPal id shown is a real sandbox object.
+The public demo is rate limited per IP on the lab, AI and approval routes. Set `OWNER_PASSCODE` to require a passcode (entered once in Settings) for approvals, policy changes, fulfilment, the lab and manual sweeps; the hosted judge demo leaves it empty so anyone can try the approval flow. Every PayPal id shown is a real sandbox object.
 
 ## Limitations
 
-- **Sandbox only, by design.** Production PayPal is refused at startup. Going live would need real merchant onboarding, PCI scope review (the lab sends raw test card numbers), and authentication in front of the approvals inbox; the public demo has none.
+- **Sandbox only, by design.** Production PayPal is refused at startup. Going live would need real merchant onboarding, PCI scope review (the lab sends raw test card numbers), and real user accounts; the only access control is the optional shared `OWNER_PASSCODE`, and the open demo has none.
 - **No live verification yet.** This build was developed and tested against PayPal's documentation and an in-memory fake of the sandbox API; [PROGRESS.md](PROGRESS.md) lists exactly which live sandbox checks are still open (single-step AUTHORIZE card orders, which mock codes each endpoint honours, reauthorization of card authorizations, invoice create response shape).
 - **The demo clock is Nightshift-only.** With the clock at +5 days, Nightshift may reauthorize an authorization that PayPal knows is minutes old, and PayPal may refuse. Those refusals are shown as they are.
 - **Reauthorization** is documented for PayPal-account payments; card authorizations from the lab will probably be refused (`REAUTHORIZATION_NOT_SUPPORTED_FOR_PAYMENT_SOURCE`). Nightshift then asks the owner.

@@ -14,7 +14,7 @@ const STATUS: Record<Incident["status"], { label: string; tone: string }> = {
   awaiting_approval: { label: "Needs you", tone: "amber" },
   resolved: { label: "Resolved", tone: "green" },
   failed: { label: "Failed", tone: "red" },
-  dismissed: { label: "Dismissed", tone: "" },
+  dismissed: { label: "Closed by owner", tone: "" },
 };
 
 export function IncidentStatus({ status }: { status: Incident["status"] }) {

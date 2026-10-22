@@ -9,6 +9,8 @@ import { randomUUID } from "node:crypto";
 import { assertSandboxOnly, config, SANDBOX_API_BASE } from "../config";
 import type * as T from "./types";
 
+const REQUEST_TIMEOUT_MS = 30_000;
+
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
 export type PayPalResult<B = unknown> = {
@@ -70,6 +72,7 @@ export class PayPalClient {
     const basic = Buffer.from(`${this.options.clientId}:${this.options.clientSecret}`).toString("base64");
     const response = await this.fetchImpl(`${this.apiBase}/v1/oauth2/token`, {
       method: "POST",
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       headers: {
         Authorization: `Basic ${basic}`,
         "Content-Type": "application/x-www-form-urlencoded",
@@ -96,8 +99,23 @@ export class PayPalClient {
     let refreshed = false;
 
     for (let attempt = 0; ; attempt++) {
+      let token: string;
+      try {
+        token = await this.accessToken(refreshed);
+      } catch (error) {
+        return {
+          ok: false,
+          status: 0,
+          body: { name: "AUTHENTICATION_FAILURE", message: String(error) },
+          debugId: null,
+          method,
+          path: url.pathname + url.search,
+          requestId,
+          durationMs: Date.now() - started,
+        } as PayPalResult<B>;
+      }
       const headers: Record<string, string> = {
-        Authorization: `Bearer ${await this.accessToken(refreshed)}`,
+        Authorization: `Bearer ${token}`,
         Accept: "application/json",
         Prefer: opts.prefer ?? "return=representation",
       };
@@ -112,6 +130,8 @@ export class PayPalClient {
           method,
           headers,
           body: payload,
+          // Bounded so three attempts finish well inside the worker's 3-minute stuck-action window.
+          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
         });
       } catch (error) {
         if (attempt < retries) {

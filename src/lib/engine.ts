@@ -6,7 +6,7 @@ import { randomUUID } from "node:crypto";
 import type { Store } from "./db";
 import { ACTION_LABELS, type ActionRecord, type ActionType, type Incident, type ProposedAction } from "./domain";
 import { executeAction, idempotencyKey } from "./executor";
-import { evaluate } from "./policy/gate";
+import { evaluate, subjectSettled } from "./policy/gate";
 import { makeClock } from "./clock";
 import type { PayPalClient } from "./paypal/client";
 import { formatMoney } from "./money";
@@ -136,8 +136,22 @@ export function settleIncident(store: Store, incidentId: string): Incident | nul
     }
     return store.updateIncident(incidentId, { status: "awaiting_approval" });
   }
-  if (actions.some((a) => a.status === "succeeded" || a.status === "done")) {
+  if (actions.some((a) => a.status === "succeeded" || (a.status === "done" && a.type === "mark_resolved"))) {
     return store.updateIncident(incidentId, { status: "resolved" });
+  }
+  if (actions.some((a) => a.status === "done" && a.type === "ask_owner")) {
+    // The owner answered. That closes the question, not necessarily the money problem.
+    const settled = incident.atRiskCents === 0 || subjectSettled(incident, store.ledger());
+    if (!settled) {
+      store.addEvent({
+        incidentId,
+        kind: "outcome",
+        actor: "system",
+        title: `Closed by the owner; ${formatMoney(incident.atRiskCents, incident.currency)} still at risk`,
+        detail: null,
+      });
+    }
+    return store.updateIncident(incidentId, { status: settled ? "resolved" : "dismissed" });
   }
   if (actions.some((a) => a.status === "failed")) return store.updateIncident(incidentId, { status: "failed" });
   return incident;
@@ -199,34 +213,46 @@ export async function decideAction(
     return done;
   }
 
-  // Approve, possibly with an edited amount: the gate re-checks the edited action. The owner may
-  // approve what needs approval, never what is forbidden.
-  let toRun = action;
-  if (decision.amountCents !== undefined && decision.amountCents !== action.amountCents) {
-    const gate = evaluate({
-      proposal: {
-        type: action.type,
-        targetId: action.targetId,
-        amountCents: decision.amountCents,
-        currency: action.currency,
-        note: action.note,
-        rationale: action.rationale,
-      },
-      incident,
-      ledger: store.ledger(),
-      settings: store.settings(),
-      now: detectorClock(store).now(),
-    });
-    if (gate.decision === "forbidden") {
-      throw new ApprovalError(`Policy forbids that amount: ${gate.reasons.join(" ")}`);
+  // Approve, possibly with an edited amount. The gate re-checks every approval against the ledger
+  // as it is now (the authorization may have expired or been captured since, or the incident may
+  // be closed). The owner may approve what needs approval, never what is forbidden.
+  const amountCents = decision.amountCents ?? action.amountCents;
+  const gate = evaluate({
+    proposal: {
+      type: action.type,
+      targetId: action.targetId,
+      amountCents,
+      currency: action.currency,
+      note: action.note,
+      rationale: action.rationale,
+    },
+    incident,
+    ledger: store.ledger(),
+    settings: store.settings(),
+    now: detectorClock(store).now(),
+  });
+  if (gate.decision === "forbidden") {
+    if (decision.amountCents === undefined || decision.amountCents === action.amountCents) {
+      // The world changed since the proposal: take it out of the inbox.
+      store.claimAction(actionId, ["awaiting_approval"], "blocked", { reasons: [...action.reasons, ...gate.reasons], decidedBy: "policy (re-check)" });
+      store.addEvent({ incidentId: incident.id, kind: "policy", actor: "policy", title: "Policy re-check at approval: forbidden", detail: { actionId, reasons: gate.reasons } });
+      settleIncident(store, incident.id);
     }
+    throw new ApprovalError(`Policy forbids this now: ${gate.reasons.join(" ")}`);
+  }
+  let toRun = action;
+  if (gate.action.amountCents !== action.amountCents) {
     const key = idempotencyKey(incident.id, action.type, action.targetId, gate.action.amountCents);
+    const clash = store.findActionByKey(key);
+    if (clash && clash.id !== action.id) throw new ApprovalError(`An action for that exact amount already exists (${clash.status}).`);
     toRun = store.updateAction(actionId, {
       amountCents: gate.action.amountCents,
       call: gate.call,
       reasons: [...gate.reasons, `Amount edited by the owner from ${formatMoney(action.amountCents ?? 0, action.currency ?? "USD")}.`],
       idempotencyKey: key,
     });
+  } else {
+    toRun = store.updateAction(actionId, { call: gate.call });
   }
   const approved = store.claimAction(toRun.id, ["awaiting_approval"], "approved", { decidedBy: decision.by });
   if (!approved) throw new ApprovalError("Someone else decided first.");

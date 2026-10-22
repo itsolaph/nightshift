@@ -3,6 +3,9 @@ import { store } from "@/lib/db";
 import { connections } from "@/lib/summary";
 import { SettingsForm } from "@/components/settings-form";
 import { ACTION_LABELS } from "@/lib/domain";
+import { cookies } from "next/headers";
+import { OWNER_COOKIE, ownerPasscode, ownerToken } from "@/lib/owner";
+import { OwnerUnlock } from "@/components/owner-unlock";
 
 export const metadata = { title: "Settings" };
 
@@ -33,6 +36,8 @@ export default async function SettingsPage() {
   await connection();
   const s = store();
   const c = connections(s);
+  const passcodeRequired = Boolean(ownerPasscode());
+  const owner = !passcodeRequired || (await cookies()).get(OWNER_COOKIE)?.value === ownerToken();
   return (
     <>
       <div className="page-head">
@@ -44,6 +49,17 @@ export default async function SettingsPage() {
       <div className="grid main-side">
         <SettingsForm initial={s.settings()} />
         <div className="stack">
+          {passcodeRequired ? (
+            <div className="card">
+              <div className="card-head">
+                <div>
+                  <h2>Owner access</h2>
+                  <p>Approvals, policy changes and the lab need the owner passcode on this instance.</p>
+                </div>
+              </div>
+              <OwnerUnlock owner={owner} />
+            </div>
+          ) : null}
           <div className="card">
             <div className="card-head">
               <h2>Connections</h2>

@@ -54,6 +54,8 @@ services:
         sync: false
       - key: TELEGRAM_CHAT_ID
         sync: false
+      - key: OWNER_PASSCODE
+        sync: false
       - key: CRON_SECRET
         generateValue: true
       - key: INTERNAL_API_TOKEN

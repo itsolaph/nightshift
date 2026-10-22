@@ -38,7 +38,7 @@ const AGE_BUCKETS: Record<string, string> = {
 };
 
 export function buildStudioData(data: AnalyticsData): AgDataSourcesDefinition<NightshiftRegistry> {
-  const open = (status: string) => !["resolved", "dismissed"].includes(status);
+  const open = (status: string) => status !== "resolved";
   const incidents = data.incidents.map((i) => ({
     ...i,
     openAtRisk: open(i.status) ? i.atRisk : 0,

@@ -321,11 +321,12 @@ export class Store {
 
   /** Records a webhook delivery; false when this event id was already stored (PayPal retries deliveries). */
   recordWebhook(id: string, eventType: string, verified: boolean, body: unknown): boolean {
-    const result = this.db
-      .prepare(
-        "INSERT OR IGNORE INTO webhook_events (id, event_type, verified, received_at, data) VALUES (?, ?, ?, ?, ?)",
-      )
-      .run(id, eventType, verified ? 1 : 0, nowIso(), JSON.stringify(body));
+    // An unverified delivery never blocks a later verified retry of the same event.
+    const sql = verified
+      ? `INSERT INTO webhook_events (id, event_type, verified, received_at, data) VALUES (?, ?, 1, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET verified = 1, received_at = excluded.received_at, data = excluded.data WHERE webhook_events.verified = 0`
+      : "INSERT OR IGNORE INTO webhook_events (id, event_type, verified, received_at, data) VALUES (?, ?, 0, ?, ?)";
+    const result = this.db.prepare(sql).run(id, eventType, nowIso(), JSON.stringify(body));
     return Number(result.changes) > 0;
   }
 

@@ -1,5 +1,6 @@
 // Scenario lab (sandbox only): seeds real sandbox objects. Rate limited per IP.
 
+import { requireOwner } from "@/lib/owner";
 import { z } from "zod";
 import { store } from "@/lib/db";
 import { jsonError, rateLimit, readJson } from "@/lib/http";
@@ -12,6 +13,8 @@ export const dynamic = "force-dynamic";
 const Body = z.object({ scenario: z.string().max(64) });
 
 export async function POST(request: Request) {
+  const denied = requireOwner(request);
+  if (denied) return denied;
   const limited = rateLimit(request, "lab");
   if (limited) return limited;
   const parsed = Body.safeParse(await readJson(request));

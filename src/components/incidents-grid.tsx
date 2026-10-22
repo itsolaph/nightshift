@@ -23,7 +23,7 @@ const STATUS_LABEL: Record<string, string> = {
   awaiting_approval: "Needs you",
   resolved: "Resolved",
   failed: "Failed",
-  dismissed: "Dismissed",
+  dismissed: "Closed by owner",
 };
 
 const usd = (v: number | null | undefined) =>

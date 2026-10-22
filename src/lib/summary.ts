@@ -17,7 +17,8 @@ export function summary(store: Store) {
     open: open.length,
     awaitingApproval: actions.filter((a) => a.status === "awaiting_approval").length,
     savedCents: incidents.reduce((sum, i) => sum + i.savedCents, 0),
-    atRiskCents: open.reduce((sum, i) => sum + i.atRiskCents, 0),
+    // Includes incidents the owner closed without the money being settled.
+    atRiskCents: incidents.filter((i) => i.status !== "resolved").reduce((sum, i) => sum + i.atRiskCents, 0),
     autoExecuted: actions.filter((a) => a.decision === "auto" && a.status === "succeeded").length,
     blocked: actions.filter((a) => a.status === "blocked").length,
     clockOffsetDays: clock.offsetDays,

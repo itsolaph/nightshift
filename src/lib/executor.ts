@@ -38,6 +38,8 @@ function savedBy(action: ActionRecord): number {
   }
 }
 
+const FAILED_RESOURCE_STATUSES = new Set(["DECLINED", "FAILED", "DENIED", "CANCELLED"]);
+
 const OUTCOME: Record<string, string> = {
   capture_authorization: "captured",
   reauthorize_authorization: "reauthorized",
@@ -66,6 +68,11 @@ export async function executeAction(
   if (!action.call) {
     const done = store.updateAction(action.id, { status: "done" });
     if (incident && action.type === "mark_resolved") {
+      for (const sibling of store.listActions(incident.id)) {
+        if (sibling.status === "awaiting_approval") {
+          store.claimAction(sibling.id, ["awaiting_approval"], "rejected", { decidedBy: "system (incident closed)" });
+        }
+      }
       store.updateIncident(incident.id, { status: "resolved" });
       store.addEvent({
         incidentId: incident.id,
@@ -107,23 +114,36 @@ export async function executeAction(
   });
 
   const response = { status: result.status, body: result.body, debugId: result.debugId };
+  // A 2xx can still carry a failed resource: a capture with status DECLINED, a refund FAILED.
+  const resourceStatus = (result.body as { status?: string } | null)?.status ?? null;
+  const resourceFailed = result.ok && resourceStatus !== null && FAILED_RESOURCE_STATUSES.has(resourceStatus);
+  const ok = result.ok && !resourceFailed;
   const error = result.ok ? null : describeError(result.body);
+  const failure = resourceFailed ? `${resourceStatus} (HTTP ${result.status})` : (error?.message ?? `HTTP ${result.status}`);
   store.addEvent({
     incidentId: action.incidentId,
     kind: "paypal_response",
     actor: "paypal",
-    title: result.ok ? `PayPal returned ${result.status}` : `PayPal refused: ${result.status} ${error?.message ?? ""}`.trim(),
+    title: ok
+      ? `PayPal returned ${result.status}${resourceStatus ? ` (${resourceStatus})` : ""}`
+      : resourceFailed
+        ? `PayPal answered ${result.status} but the ${action.type === "refund_capture" ? "refund" : "capture"} is ${resourceStatus}`
+        : `PayPal refused: ${result.status} ${error?.message ?? ""}`.trim(),
     detail: { actionId: action.id, ...response, durationMs: result.durationMs },
   });
 
   if (action.type === "capture_authorization" && action.targetId) {
     const auth = store.getLedger("authorization", action.targetId);
-    if (auth) recordCaptureAttempt(store, { orderId: auth.orderId, authorizationId: auth.id, result, source: "nightshift" });
+    if (auth) {
+      const attempt = recordCaptureAttempt(store, { orderId: auth.orderId, authorizationId: auth.id, result, source: "nightshift" });
+      if (resourceFailed) store.putLedger("capture_attempt", { ...attempt, ok: false, errorIssue: resourceStatus });
+    }
   }
 
-  if (!result.ok) {
+  if (!ok) {
+    if (resourceFailed && action.targetId) applyPayPalResult(store, action.type, action.targetId, result.body);
     const failed = store.updateAction(action.id, { status: "failed", response });
-    if (incident) escalateAfterFailure(store, incident, failed, error?.message ?? `HTTP ${result.status}`);
+    if (incident) escalateAfterFailure(store, incident, failed, failure);
     return { action: failed, executed: true };
   }
 

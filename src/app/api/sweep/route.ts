@@ -5,6 +5,7 @@ import { config } from "@/lib/config";
 import { store } from "@/lib/db";
 import { rateLimit } from "@/lib/http";
 import { runCycle } from "@/lib/worker";
+import { requireOwner } from "@/lib/owner";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,8 @@ export async function POST(request: Request) {
   const secret = config().cronSecret;
   const fromCron = Boolean(secret) && request.headers.get("authorization") === `Bearer ${secret}`;
   if (!fromCron) {
+    const denied = requireOwner(request);
+    if (denied) return denied;
     const limited = rateLimit(request, "sweep");
     if (limited) return limited;
   }

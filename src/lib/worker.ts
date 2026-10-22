@@ -39,8 +39,20 @@ async function recoverStuckActions(s: Store) {
     .listActionsByStatus("executing")
     .filter((a) => Date.now() - new Date(a.updatedAt).getTime() > STUCK_EXECUTING_MS);
   for (const action of stuck) {
-    s.updateAction(action.id, { status: "approved" });
-    await executeAction(s, paypal(), action.id, "recovery");
+    // Re-check inside the transaction: another cycle may have finished or recovered it already.
+    const reclaimed = s.transaction(() => {
+      const current = s.getAction(action.id);
+      if (!current || current.status !== "executing") return false;
+      if (Date.now() - new Date(current.updatedAt).getTime() <= STUCK_EXECUTING_MS) return false;
+      s.updateAction(action.id, { status: "approved" });
+      return true;
+    });
+    if (!reclaimed) continue;
+    try {
+      await executeAction(s, paypal(), action.id, "recovery");
+    } catch (error) {
+      console.warn("[worker] recovery failed:", String(error));
+    }
   }
 }
 

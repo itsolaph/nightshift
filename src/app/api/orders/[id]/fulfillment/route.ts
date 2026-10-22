@@ -1,6 +1,7 @@
 // The owner (or the shop) marks an order shipped or cancelled. PayPal has no fulfilment state for
 // an authorize-then-capture order, so Nightshift's ledger keeps it.
 
+import { requireOwner } from "@/lib/owner";
 import { z } from "zod";
 import { store } from "@/lib/db";
 import { jsonError, rateLimit, readJson } from "@/lib/http";
@@ -10,6 +11,8 @@ export const dynamic = "force-dynamic";
 const Body = z.object({ fulfillment: z.enum(["unfulfilled", "shipped", "cancelled"]) });
 
 export async function POST(request: Request, ctx: RouteContext<"/api/orders/[id]/fulfillment">) {
+  const denied = requireOwner(request);
+  if (denied) return denied;
   const limited = rateLimit(request, "mutate");
   if (limited) return limited;
   const { id } = await ctx.params;

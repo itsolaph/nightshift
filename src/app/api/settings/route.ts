@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { requireOwner } from "@/lib/owner";
 import { store } from "@/lib/db";
 import { jsonError, rateLimit, readJson } from "@/lib/http";
 
@@ -25,6 +26,8 @@ export function GET() {
 }
 
 export async function POST(request: Request) {
+  const denied = requireOwner(request);
+  if (denied) return denied;
   const limited = rateLimit(request, "mutate");
   if (limited) return limited;
   const parsed = Patch.safeParse(await readJson(request));
