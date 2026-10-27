@@ -1067,10 +1067,6 @@ textarea.input {
   gap: var(--space-xs);
   flex-wrap: nowrap;
 }
-/* Auto-height grids scroll with the page, so their pinned top rows stick under the topbar. */
-.ag-layout-auto-height .ag-grid-pinned-top-rows {
-  top: var(--topbar-h);
-}
 
 /* --- Ledger ------------------------------------------------------------------------------------ */
 
