@@ -535,6 +535,13 @@ export function labRunning(store: Store): { runId: string; startedAt: string } |
   return running;
 }
 
+/** A process restart kills any lab run in flight, so a leftover marker would block the lab until it went stale. */
+export function clearInterruptedLabRun(store: Store): boolean {
+  if (!store.getKv(RUN_KEY)) return false;
+  store.setKv(RUN_KEY, null);
+  return true;
+}
+
 async function labRun<R>(store: Store, client: PayPalClient, runId: string, options: LabSessionOptions, fn: (ctx: ScenarioContext) => Promise<R>): Promise<R> {
   if (labRunning(store)) throw new Error("A lab run is already in progress");
   store.setKv(RUN_KEY, { runId, startedAt: new Date().toISOString() });

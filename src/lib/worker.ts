@@ -10,6 +10,7 @@ import { executeAction } from "./executor";
 import { ensureWebhook } from "./paypal/webhooks";
 import { registerTelegramWebhook } from "./telegram";
 import { dispatchTriage, recoverStuckTriage } from "./runner";
+import { clearInterruptedLabRun } from "./scenarios";
 
 const SWEEP_EVERY_MS = 5 * 60_000;
 const TICK_MS = 15_000;
@@ -75,6 +76,7 @@ export async function runCycle(s: Store = defaultStore(), opts: { forceSweep?: b
 const globalWorker = globalThis as unknown as { __nightshiftWorker?: { timer: NodeJS.Timeout; running: boolean } };
 
 export async function startup(s: Store = defaultStore()) {
+  if (clearInterruptedLabRun(s)) console.log("[worker] cleared a lab run interrupted by the restart");
   const client = paypal();
   if (client) {
     try {
