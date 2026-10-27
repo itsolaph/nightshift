@@ -20,7 +20,6 @@ export default async function ApprovalsPage() {
     <>
       <div className="page-head">
         <div>
-          <div className="eyebrow">Approvals</div>
           <h1>{waiting.length ? `${waiting.length} decision${waiting.length === 1 ? "" : "s"} waiting for you` : "Nothing waiting for you"}</h1>
           <p>Anything that sends money back, cancels a payment, charges more than the evidence supports or needs your judgement stops here. You see the agent&apos;s reasoning, the policy&apos;s reasons and the exact PayPal call before it runs.</p>
         </div>

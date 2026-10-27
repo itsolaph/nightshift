@@ -23,10 +23,9 @@ export default async function LabPage() {
     <>
       <div className="page-head">
         <div>
-          <div className="eyebrow">Scenario lab, sandbox only</div>
           <h1>Make the problems happen, for real</h1>
           <p>
-            Nobody should have to wait 29 days to see this work. The lab creates real PayPal sandbox objects (paid orders, failed captures via negative testing, double refunds, overdue invoices) and
+            Scenario lab, sandbox only. Nobody should have to wait 29 days to see this work. The lab creates real PayPal sandbox objects (paid orders, failed captures via negative testing, double refunds, overdue invoices) and
             then gets out of the way: the same watcher, detectors, agent and policy gate that run in production take it from there.
           </p>
         </div>

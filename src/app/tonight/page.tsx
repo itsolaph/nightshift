@@ -21,7 +21,6 @@ export default async function TonightPage() {
     <>
       <div className="page-head">
         <div>
-          <div className="eyebrow">Tonight</div>
           <h1>What Nightshift caught</h1>
           <p>Every incident the detectors opened, what the agent proposed, what the policy gate allowed and what PayPal answered. This page updates live.</p>
         </div>

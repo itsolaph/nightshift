@@ -23,7 +23,7 @@ export async function Topbar() {
             className={`clock-chip ${s.clockOffsetDays ? "" : "idle"}`}
             title="The demo clock only moves Nightshift's detector clock. PayPal always sees real time."
           >
-            Demo clock: +{s.clockOffsetDays} {s.clockOffsetDays === 1 ? "day" : "days"}
+            <span className="hide-sm">Demo clock: </span>+{s.clockOffsetDays} {s.clockOffsetDays === 1 ? "day" : "days"}
           </Link>
           <LiveRefresh />
         </div>

@@ -51,13 +51,13 @@ export function CountdownWidget({ format, context, widgetApi }: AgWidgetParams<C
 
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column", gap: 6, padding: "2px 4px", overflow: "auto" }}>
-      <div style={{ fontSize: 12, color: "#8494b3" }}>
+      <div style={{ fontSize: 12, color: "var(--ns-muted)" }}>
         {mode === "honor" ? "Until the 3-day honor period ends" : "Until the 29-day authorization expires"}
         {ctx?.clockOffsetMs ? ` (detector clock +${Math.round(ctx.clockOffsetMs / 86400000)}d)` : ""}
       </div>
       {rows.map((a) => {
         const left = a.due - clock;
-        const tone = left <= 0 ? "#ff7a7a" : left < 86400000 * (mode === "honor" ? 0.5 : 3) ? "#ffc35c" : "#46d39a";
+        const tone = left <= 0 ? "var(--ns-red)" : left < 86400000 * (mode === "honor" ? 0.5 : 3) ? "var(--ns-amber-strong)" : "var(--ns-green)";
         return (
           <div
             key={a.id}
@@ -66,19 +66,19 @@ export function CountdownWidget({ format, context, widgetApi }: AgWidgetParams<C
               gridTemplateColumns: "1fr auto",
               alignItems: "center",
               gap: 8,
-              border: "1px solid #22314f",
+              border: "1px solid var(--ns-border)",
               borderRadius: 8,
               padding: "6px 10px",
-              background: "#0b1324",
+              background: "var(--ns-bg-2)",
             }}
           >
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, color: "#c3cde0", overflow: "hidden", textOverflow: "ellipsis" }}>{a.id}</div>
-              <div style={{ fontSize: 11, color: "#8494b3" }}>
+              <div style={{ fontFamily: "var(--ns-mono)", fontSize: 12, color: "var(--ns-ink-2)", overflow: "hidden", textOverflow: "ellipsis" }}>{a.id}</div>
+              <div style={{ fontSize: 11, color: "var(--ns-muted)" }}>
                 ${a.uncaptured.toFixed(2)} uncaptured · {a.fulfillment}
               </div>
             </div>
-            <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 18, fontWeight: 700, color: tone, fontVariantNumeric: "tabular-nums" }}>
+            <div style={{ fontFamily: "var(--ns-mono)", fontSize: 18, fontWeight: 700, color: tone, fontVariantNumeric: "tabular-nums" }}>
               {left <= 0 ? "expired" : split(left)}
             </div>
           </div>

@@ -42,7 +42,6 @@ export default async function SettingsPage() {
     <>
       <div className="page-head">
         <div>
-          <div className="eyebrow">Settings</div>
           <h1>Policy, clock and connections</h1>
         </div>
       </div>

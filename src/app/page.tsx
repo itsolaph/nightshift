@@ -55,12 +55,13 @@ export default async function Home() {
     <>
       <section className="hero">
         <div>
-          <div className="eyebrow">For one-to-five-person PayPal shops</div>
           <h1>
-            The payments operator that works <em>the night shift</em>.
+            The payments operator that works
+            <br />
+            the night shift.
           </h1>
           <p className="lede">
-            Small shops that charge when they ship lose money quietly: authorizations lapse, captures fail after the parcel has left, buyers get charged twice. Nightshift watches every order, authorization, capture, refund and invoice on your PayPal account, fixes the safe problems itself and asks you before anything risky.
+            For one-to-five-person PayPal shops. Small shops that charge when they ship lose money quietly: authorizations lapse, captures fail after the parcel has left, buyers get charged twice. Nightshift watches every order, authorization, capture, refund and invoice on your PayPal account, fixes the safe problems itself and asks you before anything risky.
           </p>
           <div className="actions">
             <Link href="/lab" className="btn primary big">
@@ -71,15 +72,9 @@ export default async function Home() {
             </Link>
           </div>
           <div className="status-strip" style={{ marginTop: 22 }}>
-            <span>
-              <span className={`dot ${conn.paypal ? "on" : "off"}`} /> PayPal sandbox {conn.paypal ? "connected" : "not connected"}
-            </span>
-            <span>
-              <span className={`dot ${conn.llm ? "on" : ""}`} /> {conn.llm ? `AI agent (${conn.llmModel})` : "Rule-based triage (no LLM key)"}
-            </span>
-            <span>
-              <span className={`dot ${conn.webhookId ? "on" : ""}`} /> {conn.webhookId ? "Webhooks verified" : "Sweep only (no webhook)"}
-            </span>
+            <span>PayPal sandbox {conn.paypal ? "connected" : "not connected"}</span>
+            <span>{conn.llm ? `AI agent (${conn.llmModel})` : "Rule-based triage (no LLM key)"}</span>
+            <span>{conn.webhookId ? "Webhooks verified" : "Sweep only (no webhook)"}</span>
           </div>
         </div>
 

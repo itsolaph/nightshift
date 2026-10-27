@@ -17,7 +17,6 @@ export default async function LedgerPage() {
     <>
       <div className="page-head">
         <div>
-          <div className="eyebrow">Ledger</div>
           <h1>Every order and its money state</h1>
           <p>
             Nightshift&apos;s local copy of PayPal: orders, authorizations, captures, refunds and invoices, refreshed by webhooks and a sweep every few minutes. Fulfilment comes from the shop, because PayPal does not know whether a parcel left.

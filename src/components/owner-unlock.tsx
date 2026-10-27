@@ -14,7 +14,7 @@ export function OwnerUnlock({ owner }: { owner: boolean }) {
     return (
       <div className="spread">
         <span className="row small">
-          <span className="dot on" /> Unlocked in this browser
+          Signed in as owner in this browser
         </span>
         <button
           className="btn small ghost"
@@ -43,7 +43,7 @@ export function OwnerUnlock({ owner }: { owner: boolean }) {
     >
       <input className="input" type="password" placeholder="Owner passcode" value={passcode} onChange={(e) => setPasscode(e.target.value)} style={{ maxWidth: 220 }} />
       <button className="btn primary" disabled={busy || !passcode}>
-        Unlock
+        Sign in as owner
       </button>
       {error ? <span className="small red">{error}</span> : null}
     </form>

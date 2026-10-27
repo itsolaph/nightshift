@@ -18,10 +18,9 @@ export default async function InsightsPage() {
     <>
       <div className="page-head">
         <div>
-          <div className="eyebrow">Insights, built with AG Studio</div>
           <h1>What the night cost, and what it saved</h1>
           <p>
-            Money protected and at risk by incident type, authorization aging, refund and capture failure rates. Ask the assistant things like &quot;which incidents cost the most this week?&quot; and it builds the widget.
+            Built with AG Studio. Money protected and at risk by incident type, authorization aging, refund and capture failure rates. Ask the assistant things like &quot;which incidents cost the most this week?&quot; and it builds the widget.
           </p>
         </div>
       </div>
