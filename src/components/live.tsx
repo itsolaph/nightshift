@@ -42,9 +42,8 @@ export function LiveRefresh() {
   }, [router, paused]);
 
   return (
-    <span className="badge" title={connected ? "Receiving live updates" : "Reconnecting"}>
-      <span className={`dot ${connected && !paused ? "on pulse" : ""}`} />
-      <span className="hide-sm">{paused ? "Paused" : connected ? "Live" : "Connecting"}</span>
+    <span className={`live-state ${connected && !paused ? "on" : ""}`} title={connected ? "Receiving live updates" : "Reconnecting"}>
+      {paused ? "Paused" : connected ? "Live" : "Connecting"}
     </span>
   );
 }

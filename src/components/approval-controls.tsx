@@ -34,16 +34,16 @@ export function ApprovalControls({ action }: { action: ActionRecord }) {
 
   if (isQuestion) {
     return (
-      <div className="stack" style={{ gap: 10 }}>
+      <div className="stack controls">
         <label className="field">
           Your answer (kept in the audit trail)
           <textarea className="input" rows={2} value={reply} onChange={(e) => setReply(e.target.value)} placeholder="e.g. Ships Thursday, capture then. Or: void it, I'll email the buyer." />
         </label>
         <div className="row">
-          <button className="btn good big" disabled={!!busy || !reply.trim()} onClick={() => send({ decision: "answer", reply }, "answer")}>
-            {busy === "answer" ? "Saving..." : "Answer and close"}
+          <button type="button" className="btn primary big" disabled={!!busy || !reply.trim()} onClick={() => send({ decision: "answer", reply }, "answer")}>
+            {busy === "answer" ? "Saving…" : "Answer and close"}
           </button>
-          <button className="btn ghost big" disabled={!!busy} onClick={() => send({ decision: "reject", reason: "Dismissed by the owner" }, "reject")}>
+          <button type="button" className="btn big" disabled={!!busy} onClick={() => send({ decision: "reject", reason: "Dismissed by the owner" }, "reject")}>
             Dismiss
           </button>
         </div>
@@ -53,10 +53,10 @@ export function ApprovalControls({ action }: { action: ActionRecord }) {
   }
 
   return (
-    <div className="stack" style={{ gap: 10 }}>
-      <div className="row" style={{ alignItems: "flex-end" }}>
+    <div className="stack controls">
+      <div className="row controls-row">
         {editable ? (
-          <label className="field" style={{ maxWidth: 160 }}>
+          <label className="field amount-field">
             Amount ({action.currency})
             <span className="money-input">
               <span>$</span>
@@ -65,7 +65,8 @@ export function ApprovalControls({ action }: { action: ActionRecord }) {
           </label>
         ) : null}
         <button
-          className="btn good big"
+          type="button"
+          className="btn primary big"
           disabled={!!busy}
           onClick={() =>
             send(
@@ -74,10 +75,10 @@ export function ApprovalControls({ action }: { action: ActionRecord }) {
             )
           }
         >
-          {busy === "approve" ? "Calling PayPal..." : "Approve"}
+          {busy === "approve" ? "Calling PayPal…" : "Approve"}
         </button>
-        <button className="btn danger big" disabled={!!busy} onClick={() => send({ decision: "reject", reason: "Rejected by the owner" }, "reject")}>
-          {busy === "reject" ? "Rejecting..." : "Reject"}
+        <button type="button" className="btn big" disabled={!!busy} onClick={() => send({ decision: "reject", reason: "Rejected by the owner" }, "reject")}>
+          {busy === "reject" ? "Rejecting…" : "Reject"}
         </button>
       </div>
       {editable ? <p className="tiny faint">Edited amounts go back through the policy gate before anything is sent to PayPal.</p> : null}

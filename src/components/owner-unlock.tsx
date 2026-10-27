@@ -17,6 +17,7 @@ export function OwnerUnlock({ owner }: { owner: boolean }) {
           Signed in as owner in this browser
         </span>
         <button
+          type="button"
           className="btn small ghost"
           onClick={async () => {
             await fetch("/api/owner", { method: "DELETE" });
@@ -41,11 +42,11 @@ export function OwnerUnlock({ owner }: { owner: boolean }) {
         else router.refresh();
       }}
     >
-      <input className="input" type="password" placeholder="Owner passcode" value={passcode} onChange={(e) => setPasscode(e.target.value)} style={{ maxWidth: 220 }} />
-      <button className="btn primary" disabled={busy || !passcode}>
+      <input className="input passcode" type="password" aria-label="Owner passcode" placeholder="Owner passcode" value={passcode} onChange={(e) => setPasscode(e.target.value)} />
+      <button type="submit" className="btn primary" disabled={busy || !passcode}>
         Sign in as owner
       </button>
-      {error ? <span className="small red">{error}</span> : null}
+      {error ? <span className="small word firm" role="status">{error}</span> : null}
     </form>
   );
 }

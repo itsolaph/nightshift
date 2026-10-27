@@ -50,16 +50,17 @@ export default function InsightsStudio({ data, licenseKey, aiModel, clockOffsetM
   const modules = useMemo(() => (ai ? [AgStudioAiModule] : undefined), [ai]);
 
   return (
-    <div className="stack" style={{ gap: 12 }}>
-      <div className="spread">
-        <div className="row">
-          <button className={`btn small ${mode === "view" ? "primary" : "ghost"}`} onClick={() => setMode("view")}>
+    <div className="stack studio-stack">
+      <div className="spread studio-bar">
+        <div className="row" role="group" aria-label="Dashboard mode">
+          <button type="button" aria-pressed={mode === "view"} className={`seg ${mode === "view" ? "active" : ""}`} onClick={() => setMode("view")}>
             View
           </button>
-          <button className={`btn small ${mode === "edit" ? "primary" : "ghost"}`} onClick={() => setMode("edit")}>
+          <button type="button" aria-pressed={mode === "edit"} className={`seg ${mode === "edit" ? "active" : ""}`} onClick={() => setMode("edit")}>
             Edit
           </button>
           <button
+            type="button"
             className="btn small ghost"
             onClick={() => {
               localStorage.removeItem(STORAGE_KEY);

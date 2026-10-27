@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { IconPlay } from "./icons";
 
 type ScenarioInfo = { id: string; title: string; story: string; incidentTypes: string[]; clockDays: number };
 
@@ -40,50 +39,63 @@ export function LabPanel({ scenarios, running, paypal }: { scenarios: ScenarioIn
   };
 
   return (
-    <div className="stack">
-      <div className="moon-card">
-        <div className="spread">
-          <div style={{ maxWidth: 640 }}>
-            <h2>Run the night</h2>
-            <p className="muted" style={{ marginTop: 6 }}>
-              Creates real sandbox orders, captures, refunds and invoices, moves the demo clock forward in three steps (+1, +5, +27 days) and lets the watcher, the agent and the policy gate handle each step.
-              Expect a few auto-fixes, a couple of refusals from PayPal, and at least one decision waiting in Approvals. Takes about a minute with card payments, a few minutes when a
-              sandbox buyer has to approve each order on PayPal&apos;s checkout page.
-            </p>
-          </div>
-          <div className="row">
-            <button className="btn primary big" disabled={disabled} onClick={() => start("night")}>
-              <IconPlay size={16} /> {running ? "Running..." : busy === "night" ? "Starting..." : "Run the night"}
-            </button>
-            <button className="btn ghost" disabled={running || !!busy} onClick={reset}>
-              Reset local data
-            </button>
-          </div>
+    <div className="stack lab-stack">
+      <section className="sheet run-night">
+        <div className="run-night-copy">
+          <h2>Run the night</h2>
+          <p className="prose">
+            Creates real sandbox orders, captures, refunds and invoices, moves the demo clock forward in three steps (<span className="num">+1</span>, <span className="num">+5</span>, <span className="num">+27</span> days) and lets
+            the watcher, the agent and the policy gate handle each step. Expect a few auto-fixes, a couple of refusals from PayPal, and at least one decision waiting in Approvals.
+          </p>
+          <p className="small muted">About a minute with card payments; a few minutes when a sandbox buyer has to approve each order on PayPal&apos;s checkout page.</p>
         </div>
-        {message ? <div className={`banner ${message.bad ? "bad" : "info"}`} style={{ marginTop: 14 }}>{message.text}</div> : null}
-      </div>
+        <div className="row run-night-actions">
+          <button type="button" className="btn primary big" disabled={disabled} onClick={() => start("night")}>
+            {running ? "Running…" : busy === "night" ? "Starting…" : "Run the night"}
+          </button>
+          <button type="button" className="btn ghost" disabled={running || !!busy} onClick={reset}>
+            Reset local data
+          </button>
+        </div>
+        {message ? <div className={`banner ${message.bad ? "bad" : "info"}`} role="status">{message.text}</div> : null}
+      </section>
 
-      <div>
-        <h2 style={{ marginBottom: 4 }}>Single scenarios</h2>
-        <p className="muted small" style={{ marginBottom: 12 }}>Each one creates its own sandbox objects. Time-based ones move the demo clock forward if needed.</p>
-        <div className="grid cols-3">
-          {scenarios.map((s) => (
-            <div key={s.id} className="scenario">
-              <div className="spread">
-                <h3>{s.title}</h3>
-                {s.clockDays ? <span className="badge amber">+{s.clockDays}d</span> : null}
-              </div>
-              <p>{s.story}</p>
-              <div className="spread">
-                <span className="tiny faint">{s.incidentTypes.join(", ").replaceAll("_", " ")}</span>
-                <button className="btn small" disabled={disabled} onClick={() => start(s.id)}>
-                  {busy === s.id ? "Starting..." : "Run"}
-                </button>
-              </div>
-            </div>
-          ))}
+      <section>
+        <div className="section-head">
+          <h2>Single scenarios</h2>
+          <p className="sub">Each one creates its own sandbox objects. Time-based ones move the demo clock forward if needed.</p>
         </div>
-      </div>
+        <table className="ledger scenarios">
+          <thead>
+            <tr>
+              <th scope="col">Scenario</th>
+              <th scope="col">What happens</th>
+              <th scope="col">Incidents</th>
+              <th scope="col" className="num">
+                Clock
+              </th>
+              <th scope="col">
+                <span className="visually-hidden">Run</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {scenarios.map((s) => (
+              <tr key={s.id} className="scenario">
+                <th scope="row">{s.title}</th>
+                <td className="story">{s.story}</td>
+                <td className="small muted">{s.incidentTypes.join(", ").replaceAll("_", " ")}</td>
+                <td className="num">{s.clockDays ? `+${s.clockDays}d` : null}</td>
+                <td className="run-cell">
+                  <button type="button" className="btn small" disabled={disabled} onClick={() => start(s.id)}>
+                    {busy === s.id ? "Starting…" : "Run"}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
     </div>
   );
 }

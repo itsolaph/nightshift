@@ -11,6 +11,7 @@ export function SweepButton({ disabled }: { disabled?: boolean }) {
     <span className="row">
       {message ? <span className="small muted">{message}</span> : null}
       <button
+        type="button"
         className="btn ghost"
         disabled={disabled || busy}
         title="Read PayPal now: tracked orders, invoices, disputes and Transaction Search"
@@ -31,7 +32,7 @@ export function SweepButton({ disabled }: { disabled?: boolean }) {
           }
         }}
       >
-        {busy ? "Sweeping..." : "Sweep now"}
+        {busy ? "Sweeping…" : "Sweep now"}
       </button>
     </span>
   );

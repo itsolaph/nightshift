@@ -12,20 +12,20 @@ type Props = { data: AnalyticsData; webhooks: Webhook[] };
 
 const usd = (v: unknown) => (typeof v === "number" ? v.toLocaleString("en-US", { style: "currency", currency: "USD" }) : "");
 const when = (v: unknown) => (v ? String(v).replace("T", " ").slice(0, 16) : "");
-const money = (field: string, headerName: string): ColDef => ({ field, headerName, type: "rightAligned", width: 120, valueFormatter: (p) => usd(p.value) });
-const date = (field: string, headerName: string, width = 160): ColDef => ({ field, headerName, width, valueFormatter: (p) => when(p.value) });
+const money = (field: string, headerName: string): ColDef => ({ field, headerName, type: "rightAligned", width: 120, cellClass: ["num", "ag-right-aligned-cell"], valueFormatter: (p) => usd(p.value) });
+const date = (field: string, headerName: string, width = 160): ColDef => ({ field, headerName, width, cellClass: "num", valueFormatter: (p) => when(p.value) });
 const id = (field: string, headerName: string, width = 190): ColDef => ({ field, headerName, width, cellClass: "mono" });
 
 function Tone({ value }: ICellRendererParams) {
   const v = String(value ?? "");
   const tone = /COMPLETED|CAPTURED|PAID|shipped|true/.test(v)
-    ? "green"
+    ? "quiet"
     : /DECLINED|FAILED|DENIED|VOIDED|EXPIRED|false|cancelled/.test(v)
-      ? "red"
+      ? "signal"
       : /CREATED|PENDING|SENT|PARTIALLY|UNPAID|unfulfilled/.test(v)
-        ? "amber"
-        : "";
-  return <span className={`badge ${tone}`}>{v}</span>;
+        ? ""
+        : "quiet";
+  return <span className={`word ${tone}`}>{v}</span>;
 }
 
 function FulfillmentCell({ data, value }: ICellRendererParams<AnalyticsData["orders"][number]>) {
@@ -43,10 +43,10 @@ function FulfillmentCell({ data, value }: ICellRendererParams<AnalyticsData["ord
     router.refresh();
   };
   return (
-    <span className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
+    <span className="row cell-row">
       <Tone {...({ value } as ICellRendererParams)} />
       {value !== "shipped" ? (
-        <button className="btn small ghost" disabled={busy} onClick={() => set("shipped")}>
+        <button type="button" className="btn small ghost" disabled={busy} onClick={() => set("shipped")}>
           Mark shipped
         </button>
       ) : null}
@@ -70,7 +70,7 @@ export function LedgerGrids({ data, webhooks }: Props) {
             { field: "status", width: 130, cellRenderer: Tone, cellClass: "cell-center" },
             money("amount", "Amount"),
             { field: "fulfillment", headerName: "Fulfilment", width: 220, cellRenderer: FulfillmentCell, cellClass: "cell-center" },
-            { field: "payer", width: 200 },
+            { field: "payer", width: 260, tooltipField: "payer", cellClass: "clip" },
             { field: "cartRef", headerName: "Cart", width: 120 },
             { field: "description", flex: 1, minWidth: 200 },
             date("createdAt", "Created"),
@@ -166,8 +166,8 @@ export function LedgerGrids({ data, webhooks }: Props) {
     <div>
       <div className="tabs" role="tablist">
         {TABS.map((t) => (
-          <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? "active" : ""} onClick={() => setTab(t)}>
-            {t} <span className="faint">{counts[t]}</span>
+          <button key={t} type="button" role="tab" aria-selected={tab === t} className={tab === t ? "active" : ""} onClick={() => setTab(t)}>
+            {t} <span className="num tab-count">{counts[t]}</span>
           </button>
         ))}
       </div>

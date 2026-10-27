@@ -20,7 +20,7 @@ export default async function InsightsPage() {
         <div>
           <h1>What the night cost, and what it saved</h1>
           <p>
-            Built with AG Studio. Money protected and at risk by incident type, authorization aging, refund and capture failure rates. Ask the assistant things like &quot;which incidents cost the most this week?&quot; and it builds the widget.
+            Money protected and at risk by incident type, authorization aging, refund and capture failure rates. Built with AG Studio; ask the assistant &ldquo;which incidents cost the most this week?&rdquo; and it builds the widget.
           </p>
         </div>
       </div>
@@ -32,7 +32,7 @@ export default async function InsightsPage() {
           clockOffsetMs={s.settings().demoClockOffsetDays * DAY_MS}
         />
       ) : (
-        <div className="card empty">
+        <div className="sheet empty">
           <h3>No data yet</h3>
           <p>
             Run the night in the <Link href="/lab">scenario lab</Link> first; the dashboard reads Nightshift&apos;s ledger and incident log.

@@ -1,8 +1,24 @@
-// Custom AG Studio theme: Nightshift's night palette (deep navy canvas, amber accent).
+// Custom AG Studio theme: the Almanac ledger (slate stock, pale sheet, blue-black ink, one magenta).
+// Charts draw on canvas, which cannot read CSS variables, so the values here are tokens.css
+// converted to sRGB hex. Keep the two in step.
 
 import { studioTheme } from "ag-studio";
 
-const PALETTE = ["#f5b544", "#8fb3ff", "#46d39a", "#ff7a7a", "#b9a3ff", "#5fd4e8", "#ffd27a", "#f08bd0", "#9bd36a", "#c3cde0"];
+const T = {
+  paper: "#c4cbd2", // --color-paper
+  paper2: "#bbc2c8", // --color-paper-2
+  sheet: "#e5eaef", // --color-sheet
+  ink: "#060e15", // --color-ink
+  ink2: "#182027", // --color-ink-2
+  muted: "#3b434b", // --color-muted
+  rule: "#a1a9af", // --color-rule
+  rule2: "#2b343b", // --color-rule-2
+  accent: "#970d63", // --color-accent
+};
+
+// One series argues in magenta; the rest step down a slate ramp so a stacked or grouped chart
+// stays readable without a second hue.
+const PALETTE = [T.accent, T.ink2, "#68737d", "#86919a", T.muted, "#a1a9af", "#4f5a63", "#7a858e", "#2b343b", "#949fa8"];
 
 const palette = Object.fromEntries(
   PALETTE.flatMap((color, i) => [
@@ -11,50 +27,61 @@ const palette = Object.fromEntries(
   ]),
 );
 
-const FONT = 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+const BODY = 'var(--font-newsreader), "Newsreader", ui-serif, Georgia, serif';
+const DISPLAY = 'var(--font-hanken), "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif';
+// Canvas text cannot resolve var(); the chart face names the loaded family directly.
+const CHART = '"IBM Plex Mono", ui-monospace, monospace';
 
 export const nightshiftStudioTheme = studioTheme.withParams({
-  browserColorScheme: "dark",
-  fontFamily: FONT,
-  fontSize: 13,
-  backgroundColor: "#0b1324",
-  foregroundColor: "#e8edf7",
-  textColor: "#e8edf7",
-  subtleTextColor: "#8494b3",
-  borderColor: "#22314f",
-  accentColor: "#f5b544",
-  iconColor: "#c3cde0",
-  rowHoverColor: "#15213a",
-  menuBackgroundColor: "#101a2f",
-  tooltipBackgroundColor: "#15213a",
-  tooltipTextColor: "#e8edf7",
+  browserColorScheme: "light",
+  fontFamily: BODY,
+  fontSize: 14,
+  backgroundColor: T.sheet,
+  foregroundColor: T.ink,
+  textColor: T.ink,
+  subtleTextColor: T.muted,
+  borderColor: T.rule,
+  accentColor: T.accent,
+  iconColor: T.muted,
+  rowHoverColor: T.paper2,
+  menuBackgroundColor: T.sheet,
+  tooltipBackgroundColor: T.ink,
+  tooltipTextColor: T.sheet,
 
-  studioWrapperBackgroundColor: "#070d1a",
-  studioCanvasBackgroundColor: "#070d1a",
-  studioPanelContainerBackgroundColor: "#0b1324",
-  studioWidgetBackgroundColor: "#101a2f",
-  studioWidgetBorder: { width: 1, color: "#22314f" },
-  studioWidgetBorderRadius: 12,
-  studioWidgetTitleTextColor: "#e8edf7",
-  studioWidgetTitleFontFamily: FONT,
-  studioWidgetTitleFontSize: 14,
+  studioWrapperBackgroundColor: T.paper,
+  studioCanvasBackgroundColor: T.paper,
+  studioPanelContainerBackgroundColor: T.sheet,
+  studioWidgetBackgroundColor: T.sheet,
+  studioWidgetBorder: { width: 1, color: T.rule },
+  studioWidgetBorderRadius: 0,
+  studioWidgetTitleTextColor: T.ink,
+  studioWidgetTitleFontFamily: DISPLAY,
+  studioWidgetTitleFontSize: 15,
   studioWidgetTitleFontWeight: 600,
-  studioCanvasFontFamily: FONT,
+  // The canvas face sets the value widgets, which are figures; it is measured, so it takes the family name.
+  studioCanvasFontFamily: CHART,
   studioValueWidgetFontSize: 30,
-  chartFontFamily: FONT,
-  studioWidgetSubtitleTextColor: "#8494b3",
+  // Three weights across the app: 400 and 500 for text and figures, 600 for heads.
+  buttonFontWeight: 500,
+  gridHeaderFontWeight: 500,
+  studioPanelHeaderFontWeight: 600,
+  studioFormLabelFontWeight: 500,
+  studioWidgetSubtitleFontWeight: 400,
+  studioWidgetCaptionFontWeight: 400,
+  chartFontFamily: CHART,
+  studioWidgetSubtitleTextColor: T.muted,
 
-  gridHeaderBackgroundColor: "#101a2f",
-  gridHeaderTextColor: "#8494b3",
-  gridOddRowBackgroundColor: "#0d1628",
-  gridCellTextColor: "#e8edf7",
-  gridRowBorder: { width: 1, color: "#18243d" },
+  gridHeaderBackgroundColor: T.sheet,
+  gridHeaderTextColor: T.muted,
+  gridOddRowBackgroundColor: T.sheet,
+  gridCellTextColor: T.ink,
+  gridRowBorder: { width: 1, color: T.rule },
 
-  chartTextColor: "#e8edf7",
-  chartSubtleTextColor: "#8494b3",
-  chartAxisLineColor: "#31456b",
-  chartGridLineColor: "#1a2846",
-  chartTooltipBackgroundColor: "#15213a",
-  chartTooltipTextColor: "#e8edf7",
+  chartTextColor: T.ink,
+  chartSubtleTextColor: T.muted,
+  chartAxisLineColor: T.rule2,
+  chartGridLineColor: T.rule,
+  chartTooltipBackgroundColor: T.ink,
+  chartTooltipTextColor: T.sheet,
   ...palette,
 });

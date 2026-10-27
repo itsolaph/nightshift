@@ -19,25 +19,33 @@ export default async function LedgerPage() {
         <div>
           <h1>Every order and its money state</h1>
           <p>
-            Nightshift&apos;s local copy of PayPal: orders, authorizations, captures, refunds and invoices, refreshed by webhooks and a sweep every few minutes. Fulfilment comes from the shop, because PayPal does not know whether a parcel left.
+            Nightshift&apos;s local copy of PayPal, refreshed by webhooks and a sweep every few minutes. Fulfilment comes from the shop: PayPal does not know whether a parcel left.
           </p>
         </div>
-        <div className="row">
-          {balances.map((b) => (
-            <span key={b.currency} className="badge" title="GET /v1/reporting/balances (can lag up to 3 hours)">
-              Sandbox balance {b.total ?? "?"} {b.currency}
-            </span>
-          ))}
-          {sweep ? (
-            <span className="small muted">
-              Last sweep {sweep.at.slice(11, 16)} UTC{sweep.errors.length ? `, ${sweep.errors.length} warning(s)` : ""}
-            </span>
-          ) : null}
+        <div className="head-aside">
+          <dl className="head-figures">
+            {balances.map((b) => (
+              <div key={b.currency} title="GET /v1/reporting/balances (can lag up to 3 hours)">
+                <dt>Sandbox balance</dt>
+                <dd className="num">
+                  {b.total ?? "?"} {b.currency}
+                </dd>
+              </div>
+            ))}
+            {sweep ? (
+              <div>
+                <dt>Last sweep</dt>
+                <dd>
+                  <span className="num">{sweep.at.slice(11, 16)}</span> UTC{sweep.errors.length ? `, ${sweep.errors.length} warning(s)` : ""}
+                </dd>
+              </div>
+            ) : null}
+          </dl>
           <SweepButton disabled={!config().paypal.configured} />
         </div>
       </div>
       {sweep?.errors.length ? (
-        <details className="banner" style={{ marginBottom: 14 }}>
+        <details className="banner">
           <summary>Sweep warnings</summary>
           <ul className="small">
             {sweep.errors.map((e, i) => (
@@ -46,9 +54,9 @@ export default async function LedgerPage() {
           </ul>
         </details>
       ) : null}
-      <div className="card">
+      <section className="sheet">
         <LedgerGrids data={data} webhooks={s.listWebhooks(200)} />
-      </div>
+      </section>
     </>
   );
 }

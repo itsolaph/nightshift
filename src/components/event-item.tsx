@@ -42,11 +42,11 @@ function Body({ event, compact }: { event: TimelineEvent; compact: boolean }) {
           <div className="row small">
             <code>{str(d.tool)}</code>
             <span className="muted">{SOURCE_LABEL[str(d.source)] ?? ""}</span>
-            <span className={d.ok ? "green" : "red"}>{d.ok ? "ok" : "error"}</span>
+            <span className={d.ok ? "word" : "word firm"}>{d.ok ? "ok" : "error"}</span>
           </div>
-          <div className="mono tiny muted" style={{ marginTop: 4 }}>args {str(d.args)}</div>
+          <div className="mono tiny muted">args {str(d.args)}</div>
           {!compact ? (
-            <details style={{ marginTop: 4 }}>
+            <details>
               <summary>Result</summary>
               <pre className="tiny">{str(d.result)}</pre>
             </details>
@@ -58,7 +58,7 @@ function Body({ event, compact }: { event: TimelineEvent; compact: boolean }) {
     case "policy": {
       const reasons = Array.isArray(d.reasons) ? (d.reasons as string[]) : [];
       return reasons.length ? (
-        <ul className="reasons" style={{ marginTop: 4 }}>
+        <ul className="reasons">
           {reasons.map((r, i) => (
             <li key={i}>{r}</li>
           ))}
@@ -69,7 +69,7 @@ function Body({ event, compact }: { event: TimelineEvent; compact: boolean }) {
       return (
         <div className="feed-detail mono tiny">
           PayPal-Request-Id: {str(d.requestId)}
-          {d.body && !compact ? <pre style={{ marginTop: 4 }}>{str(d.body)}</pre> : null}
+          {d.body && !compact ? <pre>{str(d.body)}</pre> : null}
         </div>
       );
     case "paypal_response":
@@ -80,12 +80,12 @@ function Body({ event, compact }: { event: TimelineEvent; compact: boolean }) {
           <summary>
             HTTP {str(d.status)}, debug id {str(d.debugId) || "n/a"}, {str(d.durationMs)} ms
           </summary>
-          <pre className="tiny" style={{ marginTop: 4 }}>{str(d.body)}</pre>
+          <pre className="tiny">{str(d.body)}</pre>
         </details>
       );
     case "detected":
       return compact ? null : (
-        <div className="small muted" style={{ marginTop: 2 }}>
+        <div className="small muted">
           {str((d.evidence as Detail)?.summary)}
         </div>
       );
@@ -109,22 +109,16 @@ function Body({ event, compact }: { event: TimelineEvent; compact: boolean }) {
 export function EventItem({ event, compact = false, link = false }: { event: TimelineEvent; compact?: boolean; link?: boolean }) {
   const actor = ACTOR[event.actor] ?? ACTOR.system;
   return (
-    <div className="feed-item">
-      <div className={`feed-icon ${event.actor}`} title={actor.label}>
-        {actor.short}
-      </div>
-      <div style={{ minWidth: 0 }}>
+    <div className={`feed-item ${event.actor}`}>
+      <time className="feed-time num" dateTime={event.at}>
+        {clockTime(event.at)}
+      </time>
+      <div className="feed-main">
         <div className="feed-title">
-          {link && event.incidentId ? <Link href={`/incidents/${event.incidentId}`} style={{ color: "inherit" }}>{event.title}</Link> : event.title}
+          {link && event.incidentId ? <Link href={`/incidents/${event.incidentId}`}>{event.title}</Link> : event.title}
         </div>
         <div className="feed-meta">
-          <span>{clockTime(event.at)}</span>
-          <span>{actor.label}</span>
-          {link && event.incidentId ? (
-            <Link href={`/incidents/${event.incidentId}`} className="tiny">
-              open incident
-            </Link>
-          ) : null}
+          <span title={actor.label}>{actor.label}</span>
         </div>
         <Body event={event} compact={compact} />
       </div>

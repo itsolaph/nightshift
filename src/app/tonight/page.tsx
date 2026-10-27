@@ -22,9 +22,9 @@ export default async function TonightPage() {
       <div className="page-head">
         <div>
           <h1>What Nightshift caught</h1>
-          <p>Every incident the detectors opened, what the agent proposed, what the policy gate allowed and what PayPal answered. This page updates live.</p>
+          <p>Each incident, the agent&apos;s proposal, the gate&apos;s decision and PayPal&apos;s answer. Updates live.</p>
         </div>
-        <div className="row">
+        <div className="row head-actions">
           <SweepButton disabled={!conn.paypal} />
           <Link href="/lab" className="btn primary">
             Run the night
@@ -33,12 +33,12 @@ export default async function TonightPage() {
       </div>
 
       {!conn.paypal ? (
-        <div className="banner" style={{ marginBottom: 16 }}>
+        <div className="banner">
           PayPal sandbox credentials are not set, so Nightshift cannot read or seed sandbox data. Add them to <code>.env.local</code> (see the README) and restart.
         </div>
       ) : null}
 
-      <div className="grid cols-4" style={{ marginBottom: 16 }}>
+      <div className="stat-row">
         <Kpi label="Money protected" tone="green" value={<Money cents={stats.savedCents} />} sub={`${stats.autoExecuted} action(s) ran on autopilot`} />
         <Kpi label="Still at risk" tone="amber" value={<Money cents={stats.atRiskCents} />} sub={`${stats.open} open incident(s)`} />
         <Kpi label="Waiting for you" value={stats.awaitingApproval} sub={stats.awaitingApproval ? "See approvals" : "Nothing to decide"} />
@@ -46,20 +46,19 @@ export default async function TonightPage() {
       </div>
 
       <div className="grid main-side">
-        <div className="card flush">
-          <div className="card-head" style={{ padding: "16px 18px 0" }}>
+        <section className="sheet">
+          <div className="card-head">
             <div>
-              <h2>Incidents</h2>
-              <p>Click a row for the diagnosis, the decision and the PayPal response.</p>
+              <h2>
+                Incidents <span className="num count-figure">{data.incidents.length}</span>
+              </h2>
+              <p>Open a row for the diagnosis, the decision and the PayPal response.</p>
             </div>
-            <span className="badge">{data.incidents.length}</span>
           </div>
-          <div style={{ padding: 12 }}>
-            <IncidentsGrid rows={data.incidents} height={560} />
-          </div>
-        </div>
+          <IncidentsGrid rows={data.incidents} height={535} />
+        </section>
 
-        <div className="card">
+        <section className="side-panel">
           <div className="card-head">
             <div>
               <h2>Live feed</h2>
@@ -76,7 +75,7 @@ export default async function TonightPage() {
               events.map((e) => <EventItem key={e.seq} event={e} compact link />)
             )}
           </div>
-        </div>
+        </section>
       </div>
     </>
   );

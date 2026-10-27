@@ -43,32 +43,39 @@ export function SettingsForm({ initial }: { initial: Settings }) {
   };
 
   return (
-    <div className="stack">
-      <div className="card" id="clock">
+    <div className="stack form-stack">
+      <section className="panel" id="clock">
         <div className="card-head">
           <div>
             <h2>Demo clock</h2>
             <p>Moves Nightshift&apos;s detector clock forward so time-based incidents show up now. PayPal always sees real time, and nothing sent to PayPal changes.</p>
           </div>
-          <span className={`clock-chip ${settings.demoClockOffsetDays ? "" : "idle"}`}>+{settings.demoClockOffsetDays} days</span>
+          <span className={`clock-figure num ${settings.demoClockOffsetDays ? "" : "idle"}`}>+{settings.demoClockOffsetDays} days</span>
         </div>
-        <div className="row">
+        <div className="row" role="group" aria-label="Demo clock offset">
           {CLOCK_PRESETS.map((d) => (
-            <button key={d} className={`btn ${settings.demoClockOffsetDays === d ? "primary" : "ghost"}`} disabled={saving} onClick={() => save({ demoClockOffsetDays: d })}>
+            <button
+              key={d}
+              type="button"
+              aria-pressed={settings.demoClockOffsetDays === d}
+              className={`seg ${settings.demoClockOffsetDays === d ? "active" : ""}`}
+              disabled={saving}
+              onClick={() => save({ demoClockOffsetDays: d })}
+            >
               {d === 0 ? "Real time" : `+${d} days`}
             </button>
           ))}
         </div>
-      </div>
+      </section>
 
-      <div className="card">
+      <section className="panel">
         <div className="card-head">
           <div>
             <h2>Policy</h2>
             <p>The rules the gate applies to every proposal. Refunds and voids always need you; nothing outside the allowlist ever runs.</p>
           </div>
         </div>
-        <label className="switch" style={{ marginBottom: 16 }}>
+        <label className="switch">
           <input type="checkbox" checked={settings.autopilot} onChange={(e) => save({ autopilot: e.target.checked })} disabled={saving} />
           <span>
             <strong>Autopilot</strong>
@@ -76,7 +83,7 @@ export function SettingsForm({ initial }: { initial: Settings }) {
           </span>
         </label>
         <form
-          className="grid cols-2"
+          className="grid cols-2 policy-form"
           onSubmit={(e) => {
             e.preventDefault();
             const form = new FormData(e.currentTarget);
@@ -93,21 +100,25 @@ export function SettingsForm({ initial }: { initial: Settings }) {
           {FIELDS.map((f) => (
             <label key={f.key} className="field">
               {f.label}
-              <span className="row" style={{ flexWrap: "nowrap" }}>
-                <input className="input" name={f.key} type="number" min={0} step={f.step ?? 1} defaultValue={display(f)} key={`${f.key}-${settings[f.key]}`} />
-                <span className="small muted" style={{ minWidth: 54 }}>{f.unit}</span>
+              <span className="row input-unit">
+                <input className="input num" name={f.key} type="number" min={0} step={f.step ?? 1} defaultValue={display(f)} key={`${f.key}-${settings[f.key]}`} />
+                <span className="small muted unit">{f.unit}</span>
               </span>
               <span className="hint">{f.hint}</span>
             </label>
           ))}
-          <div className="row" style={{ gridColumn: "1 / -1" }}>
+          <div className="row form-actions">
             <button className="btn primary" type="submit" disabled={saving}>
-              {saving ? "Saving..." : "Save policy"}
+              {saving ? "Saving…" : "Save policy"}
             </button>
-            {message ? <span className={`small ${message.bad ? "red" : "green"}`}>{message.text}</span> : null}
+            {message ? (
+              <span className={`small ${message.bad ? "word firm" : "muted"}`} role="status">
+                {message.text}
+              </span>
+            ) : null}
           </div>
         </form>
-      </div>
+      </section>
     </div>
   );
 }

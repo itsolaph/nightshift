@@ -10,12 +10,12 @@ import type { AnalyticsData } from "@/lib/summary";
 type Row = AnalyticsData["incidents"][number];
 
 const STATUS_TONE: Record<string, string> = {
-  open: "red",
-  triaging: "violet",
-  awaiting_approval: "amber",
-  resolved: "green",
-  failed: "red",
-  dismissed: "",
+  open: "firm",
+  triaging: "",
+  awaiting_approval: "signal",
+  resolved: "quiet",
+  failed: "firm",
+  dismissed: "quiet",
 };
 const STATUS_LABEL: Record<string, string> = {
   open: "Open",
@@ -30,7 +30,7 @@ const usd = (v: number | null | undefined) =>
   v === null || v === undefined ? "" : v.toLocaleString("en-US", { style: "currency", currency: "USD" });
 
 function StatusCell({ value }: ICellRendererParams<Row, string>) {
-  return <span className={`badge ${STATUS_TONE[value ?? ""] ?? ""}`}>{STATUS_LABEL[value ?? ""] ?? value}</span>;
+  return <span className={`word ${STATUS_TONE[value ?? ""] ?? ""}`}>{STATUS_LABEL[value ?? ""] ?? value}</span>;
 }
 
 function TitleCell({ data }: ICellRendererParams<Row>) {
@@ -40,7 +40,8 @@ function TitleCell({ data }: ICellRendererParams<Row>) {
     <div className="cell-two">
       <span>{data.title}</span>
       <span className="sub">
-        {data.type} · {triage}
+        <span>{data.type}</span>
+        <span>{triage}</span>
       </span>
     </div>
   );
@@ -51,15 +52,16 @@ export function IncidentsGrid({ rows, height = 420 }: { rows: Row[]; height?: nu
   const router = useRouter();
   const columns = useMemo<ColDef<Row>[]>(
     () => [
-      { field: "status", headerName: "Status", width: 132, cellRenderer: StatusCell, cellClass: "cell-center" },
-      { field: "title", headerName: "What happened", flex: 1, minWidth: 220, tooltipField: "title", cellRenderer: TitleCell },
-      { field: "atRisk", headerName: "At risk", width: 98, type: "rightAligned", valueFormatter: (p) => usd(p.value) },
-      { field: "saved", headerName: "Saved", width: 96, type: "rightAligned", valueFormatter: (p) => (p.value ? usd(p.value) : "") },
+      { field: "status", headerName: "Status", width: 124, cellRenderer: StatusCell, cellClass: "cell-center" },
+      { field: "title", headerName: "What happened", flex: 1, minWidth: 200, tooltipField: "title", cellRenderer: TitleCell },
+      { field: "atRisk", headerName: "At risk", width: 100, type: "rightAligned", cellClass: ["num", "ag-right-aligned-cell"], valueFormatter: (p) => usd(p.value) },
+      { field: "saved", headerName: "Saved", width: 96, type: "rightAligned", cellClass: ["num", "ag-right-aligned-cell"], valueFormatter: (p) => (p.value ? usd(p.value) : "") },
       {
         field: "detectedAt",
         headerName: "Detected",
         headerTooltip: "On Nightshift's detector clock (includes the demo offset)",
-        width: 132,
+        width: 128,
+        cellClass: "num",
         valueFormatter: (p) => String(p.value ?? "").replace("T", " ").slice(5, 16),
         sort: "desc",
       },

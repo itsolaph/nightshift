@@ -5,59 +5,59 @@ import { formatMoney } from "@/lib/money";
 import { CopyId } from "./copy-id";
 
 export function Money({ cents, currency = "USD", className }: { cents: number; currency?: string; className?: string }) {
-  return <span className={className} style={{ fontVariantNumeric: "tabular-nums" }}>{formatMoney(cents, currency)}</span>;
+  return <span className={`num ${className ?? ""}`}>{formatMoney(cents, currency)}</span>;
 }
 
 const STATUS: Record<Incident["status"], { label: string; tone: string }> = {
-  open: { label: "Open", tone: "red" },
-  triaging: { label: "Agent working", tone: "violet" },
-  awaiting_approval: { label: "Needs you", tone: "amber" },
-  resolved: { label: "Resolved", tone: "green" },
-  failed: { label: "Failed", tone: "red" },
-  dismissed: { label: "Closed by owner", tone: "" },
+  open: { label: "Open", tone: "firm" },
+  triaging: { label: "Agent working", tone: "" },
+  awaiting_approval: { label: "Needs you", tone: "signal" },
+  resolved: { label: "Resolved", tone: "quiet" },
+  failed: { label: "Failed", tone: "firm" },
+  dismissed: { label: "Closed by owner", tone: "quiet" },
 };
 
 export function IncidentStatus({ status }: { status: Incident["status"] }) {
   const s = STATUS[status];
-  return <span className={`badge ${s.tone}`}>{s.label}</span>;
+  return <span className={`word ${s.tone}`}>{s.label}</span>;
 }
 
 export function IncidentTypeBadge({ type }: { type: IncidentType }) {
-  return <span className="badge">{INCIDENT_LABELS[type]}</span>;
+  return <span className="word quiet">{INCIDENT_LABELS[type]}</span>;
 }
 
 const DECISION: Record<ActionRecord["decision"], { label: string; tone: string }> = {
-  auto: { label: "Auto", tone: "green" },
-  needs_approval: { label: "Needs approval", tone: "amber" },
-  forbidden: { label: "Forbidden", tone: "red" },
+  auto: { label: "Auto", tone: "" },
+  needs_approval: { label: "Needs approval", tone: "signal" },
+  forbidden: { label: "Forbidden", tone: "firm" },
 };
 
 export function DecisionBadge({ decision }: { decision: ActionRecord["decision"] }) {
   const d = DECISION[decision];
-  return <span className={`badge ${d.tone}`}>{d.label}</span>;
+  return <span className={`word decision ${d.tone}`}>{d.label}</span>;
 }
 
 const ACTION_STATUS: Record<ActionRecord["status"], { label: string; tone: string }> = {
-  awaiting_approval: { label: "Waiting for you", tone: "amber" },
-  approved: { label: "Approved", tone: "blue" },
-  rejected: { label: "Rejected", tone: "" },
-  executing: { label: "Calling PayPal", tone: "blue" },
-  succeeded: { label: "PayPal OK", tone: "green" },
-  failed: { label: "PayPal refused", tone: "red" },
-  blocked: { label: "Blocked by policy", tone: "red" },
-  done: { label: "Done", tone: "green" },
+  awaiting_approval: { label: "Waiting for you", tone: "signal" },
+  approved: { label: "Approved", tone: "" },
+  rejected: { label: "Rejected", tone: "quiet" },
+  executing: { label: "Calling PayPal", tone: "" },
+  succeeded: { label: "PayPal OK", tone: "" },
+  failed: { label: "PayPal refused", tone: "firm" },
+  blocked: { label: "Blocked by policy", tone: "firm" },
+  done: { label: "Done", tone: "" },
 };
 
 export function ActionStatus({ status }: { status: ActionRecord["status"] }) {
   const s = ACTION_STATUS[status];
-  return <span className={`badge ${s.tone}`}>{s.label}</span>;
+  return <span className={`word ${s.tone}`}>{s.label}</span>;
 }
 
 export const actionLabel = (type: string) => ACTION_LABELS[type as ActionType] ?? type;
 
 export function PayPalId({ refItem }: { refItem: PayPalRef }) {
   return (
-    <span style={{ display: "inline-flex", alignItems: "center" }}>
+    <span className="pid-ref">
       <span className="pid-kind">{refItem.kind}</span>
       <CopyId id={refItem.id} />
     </span>
@@ -93,7 +93,7 @@ export function PayPalCallView({ call }: { call: ActionRecord["call"] }) {
       <div>
         <span className="method">{call.method}</span> {call.path}
       </div>
-      {call.body !== undefined ? <pre style={{ marginTop: 6 }}>{JSON.stringify(call.body, null, 2)}</pre> : null}
+      {call.body !== undefined ? <pre>{JSON.stringify(call.body, null, 2)}</pre> : null}
     </div>
   );
 }
