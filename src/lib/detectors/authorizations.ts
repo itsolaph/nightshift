@@ -20,6 +20,8 @@ import {
   uncapturedCents,
 } from "./helpers";
 
+const days = (n: number) => `${n} ${n === 1 ? "day" : "days"}`;
+
 export function detectAuthorizationAging(ledger: Ledger, now: Date, settings: Settings): IncidentDraft[] {
   const drafts: IncidentDraft[] = [];
 
@@ -67,7 +69,7 @@ export function detectAuthorizationAging(ledger: Ledger, now: Date, settings: Se
         dedupeKey: `auth_expiring:${auth.id}`,
         title: expired
           ? `${money} authorization has passed its 29-day expiry`
-          : `${money} authorization expires in ${Math.max(1, Math.ceil(msToExpiry / (24 * HOUR_MS)))} day(s)`,
+          : `${money} authorization expires in ${days(Math.max(1, Math.ceil(msToExpiry / (24 * HOUR_MS))))}`,
         deadline: iso(expiry),
         evidence: {
           summary: `Authorization ${auth.id} for order ${auth.orderId} is ${facts.age_days} days old with ${money} uncaptured. PayPal authorizations expire after 29 days and cannot be reauthorized after that.`,

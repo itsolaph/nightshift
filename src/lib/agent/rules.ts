@@ -5,6 +5,8 @@
 import type { Incident, ProposedAction } from "../domain";
 import { formatMoney } from "../money";
 
+const days = (n: number) => `${n} ${n === 1 ? "day" : "days"}`;
+
 export type Triage = { diagnosis: string; confidence: "high" | "medium" | "low"; proposals: ProposedAction[] };
 
 export function ruleBasedTriage(incident: Incident): Triage {
@@ -126,7 +128,7 @@ export function ruleBasedTriage(incident: Incident): Triage {
 
     case "invoice_overdue":
       return {
-        diagnosis: `Invoice ${f.invoice_number} is ${f.days_overdue} day(s) past due with ${money} still owed${
+        diagnosis: `Invoice ${f.invoice_number} is ${days(Number(f.days_overdue))} past due with ${money} still owed${
           f.last_reminder_at ? "" : " and no reminder sent yet"
         }. A polite reminder through PayPal is the usual first step.`,
         confidence: "high",

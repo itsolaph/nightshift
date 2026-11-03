@@ -7,6 +7,8 @@ import { DAY_MS } from "../clock";
 import type { IncidentDraft, Ledger } from "../domain";
 import { formatMoney } from "../money";
 
+const days = (n: number) => `${n} ${n === 1 ? "day" : "days"}`;
+
 export const REMINDABLE_INVOICE_STATUSES = new Set(["SENT", "UNPAID", "PARTIALLY_PAID"]);
 const DISPUTE_WARNING_DAYS = 3;
 const OPEN_DISPUTE_STATUSES = new Set(["OPEN", "WAITING_FOR_SELLER_RESPONSE"]);
@@ -25,7 +27,7 @@ export function detectOverdueInvoices(ledger: Ledger, now: Date): IncidentDraft[
     drafts.push({
       type: "invoice_overdue",
       dedupeKey: `invoice_overdue:${invoice.id}:${invoice.dueDate}`,
-      title: `Invoice ${invoice.number} is ${daysLate} day(s) overdue, ${money} ${partial ? "still owed after a partial payment" : "unpaid"}`,
+      title: `Invoice ${invoice.number} is ${days(daysLate)} overdue, ${money} ${partial ? "still owed after a partial payment" : "unpaid"}`,
       orderId: null,
       subject: { kind: "invoice", id: invoice.id },
       atRiskCents: owed,
@@ -69,7 +71,7 @@ export function detectDisputeDeadlines(ledger: Ledger, now: Date): IncidentDraft
       dedupeKey: `dispute_deadline:${dispute.id}`,
       title:
         msLeft > 0
-          ? `Dispute over ${money} needs a response within ${Math.max(1, Math.ceil(msLeft / DAY_MS))} day(s)`
+          ? `Dispute over ${money} needs a response within ${days(Math.max(1, Math.ceil(msLeft / DAY_MS)))}`
           : `Dispute over ${money}: response deadline has passed`,
       orderId: null,
       subject: { kind: "dispute", id: dispute.id },

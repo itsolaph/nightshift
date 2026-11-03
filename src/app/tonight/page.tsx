@@ -39,7 +39,7 @@ export default async function TonightPage() {
       ) : null}
 
       <div className="stat-row">
-        <Kpi label="Money protected" tone="green" value={<Money cents={stats.savedCents} />} sub={`${stats.autoExecuted} action(s) ran on autopilot`} />
+        <Kpi label="Money protected" tone="green" value={<Money cents={stats.savedCents} />} sub={`${stats.autoExecuted} ${stats.autoExecuted === 1 ? "action" : "actions"} ran on autopilot`} />
         <Kpi label="Still at risk" tone="amber" value={<Money cents={stats.atRiskCents} />} sub={`${stats.open} open incident(s)`} />
         <Kpi label="Waiting for you" value={stats.awaitingApproval} sub={stats.awaitingApproval ? "See approvals" : "Nothing to decide"} />
         <Kpi label="Blocked by policy" tone={stats.blocked ? "red" : undefined} value={stats.blocked} sub="Proposals the gate refused" />
