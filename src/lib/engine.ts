@@ -164,6 +164,9 @@ export type ApprovalDecision =
 
 export class ApprovalError extends Error {}
 
+/** Honest audit actor: a judge session is not the owner. */
+const who = (by: string) => (by.startsWith("judge") ? ({ actor: "judge", name: "Judge" } as const) : ({ actor: "owner", name: "Owner" } as const));
+
 /** The owner's decision on an action waiting in the inbox. */
 export async function decideAction(
   store: Store,
@@ -183,8 +186,8 @@ export async function decideAction(
     store.addEvent({
       incidentId: incident.id,
       kind: "approval",
-      actor: "owner",
-      title: `Owner rejected: ${label(action.type)}`,
+      actor: who(decision.by).actor,
+      title: `${who(decision.by).name} rejected: ${label(action.type)}`,
       detail: { actionId, reason: decision.reason ?? null, by: decision.by },
     });
     const remaining = store.listActions(incident.id).filter((a) => a.status === "awaiting_approval");
@@ -259,8 +262,8 @@ export async function decideAction(
   store.addEvent({
     incidentId: incident.id,
     kind: "approval",
-    actor: "owner",
-    title: `Owner approved: ${label(approved.type)}${
+    actor: who(decision.by).actor,
+    title: `${who(decision.by).name} approved: ${label(approved.type)}${
       approved.amountCents ? ` ${formatMoney(approved.amountCents, approved.currency ?? incident.currency)}` : ""
     }`,
     detail: { actionId, by: decision.by },

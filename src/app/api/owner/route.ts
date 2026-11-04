@@ -1,10 +1,12 @@
 import { jsonError, rateLimit, readJson } from "@/lib/http";
+import { verifyJudgeSession } from "@/lib/judge";
 import { OWNER_COOKIE, isOwner, ownerPasscode, ownerToken } from "@/lib/owner";
 
 export const dynamic = "force-dynamic";
 
 export function GET(request: Request) {
-  return Response.json({ required: Boolean(ownerPasscode()), owner: isOwner(request) });
+  const owner = isOwner(request);
+  return Response.json({ required: Boolean(ownerPasscode()), owner, judge: !owner && verifyJudgeSession(request) });
 }
 
 export async function POST(request: Request) {

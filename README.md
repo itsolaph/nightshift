@@ -203,6 +203,21 @@ A hosted sandbox instance on Render will be linked here and on the Devpost page 
 
 The public demo is rate limited per IP on the lab, AI and approval routes. Set `OWNER_PASSCODE` to require a passcode (entered once in Settings) for approvals, policy changes, fulfilment, the lab and manual sweeps; the hosted judge demo leaves it empty so anyone can try the approval flow. Every PayPal id shown is a real sandbox object.
 
+### Judge entrance (`/judge`, optional, sandbox demo only)
+
+When the operator turns it on, `GET /judge` gives a visitor a short-lived **judge** session with no password, then redirects to `/lab`. It runs nothing by itself. It is a deliberately public demo entrance, so only enable it for a sandbox deployment you are happy to share.
+
+- **A judge may:** start **Run the night** (the only scenario), and approve or reject an existing pending action exactly as proposed. The policy gate still re-checks every approval, the executor only talks to the PayPal sandbox, idempotency is unchanged, and the lab rate limit and one-run-at-a-time check still apply.
+- **A judge may not:** edit an approval amount, answer the agent, run other scenarios, reset data, sweep, mark orders fulfilled, change settings, or unlock owner mode. `GET /api/owner` never reports a judge as owner. Actions are recorded in the audit trail as `judge (sandbox demo)`, not as the owner.
+- **Session:** a signed `ns_judge` cookie (HMAC-SHA256 with its own secret, `HttpOnly`, `SameSite=Lax`, `Path=/`, `Secure` over HTTPS), valid for 2 hours or until the configured deadline, whichever comes first. Every gate below is re-checked on each request.
+- **Environment (placeholders):**
+  - `JUDGE_DEMO_ENABLED=true`: must be exactly `true`.
+  - `DEMO_MODE=true` and `PAYPAL_ENV=sandbox`: both must be set explicitly.
+  - `JUDGE_SESSION_SECRET=<random string of at least 32 bytes>`: independent of every other secret.
+  - `JUDGE_DEMO_UNTIL=<future ISO-8601 timestamp with zone, for example 2026-12-31T23:59:00Z>`
+- **Disable or expire:** unset or change `JUDGE_DEMO_ENABLED`, rotate `JUDGE_SESSION_SECRET` (invalidates every session), or let `JUDGE_DEMO_UNTIL` pass. `/judge` then answers 404 and existing cookies stop working. The entrance shares the per-IP rate limit used for other mutating routes.
+- **Limits:** the demo state is shared by everyone who uses it, with no tenant isolation. Judges must not enter real merchant data. This is not a security boundary for production use. With `OWNER_PASSCODE` unset the app stays an open demo, as before.
+
 ## Limitations
 
 - **Sandbox only, by design.** Production PayPal is refused at startup. Going live would need real merchant onboarding, PCI scope review (the lab sends raw test card numbers), and real user accounts; the only access control is the optional shared `OWNER_PASSCODE`, and the open demo has none.

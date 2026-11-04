@@ -12,6 +12,7 @@ const ACTOR: Record<TimelineEvent["actor"], { short: string; label: string }> = 
   executor: { short: "EX", label: "Executor" },
   paypal: { short: "PP", label: "PayPal" },
   owner: { short: "You", label: "Owner" },
+  judge: { short: "J", label: "Judge (sandbox demo)" },
   system: { short: "S", label: "System" },
   lab: { short: "LAB", label: "Scenario lab" },
 };

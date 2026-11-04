@@ -14,11 +14,14 @@ export function ownerToken(passcode = ownerPasscode()): string {
   return createHash("sha256").update(`nightshift-owner:${passcode}`).digest("hex");
 }
 
-function cookie(request: Request, name: string): string | null {
+export function cookie(request: Request, name: string): string | null {
   const header = request.headers.get("cookie") ?? "";
   for (const part of header.split(";")) {
     const [k, ...v] = part.trim().split("=");
-    if (k === name) return decodeURIComponent(v.join("="));
+    if (k === name) {
+      try { return decodeURIComponent(v.join("=")); }
+      catch { return null; }
+    }
   }
   return null;
 }
@@ -40,6 +43,7 @@ export function isOwner(request: Request): boolean {
 
 /** null when allowed, otherwise a 401 the UI turns into "unlock in Settings". */
 export function requireOwner(request: Request): Response | null {
-  if (isOwner(request)) return null;
-  return Response.json({ error: "Owner passcode required. Unlock in Settings first.", owner: false }, { status: 401 });
+  return isOwner(request) ? null : ownerRequired();
 }
+
+export const ownerRequired = () => Response.json({ error: "Owner passcode required. Unlock in Settings first.", owner: false }, { status: 401 });

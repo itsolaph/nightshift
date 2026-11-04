@@ -1,7 +1,8 @@
 // The owner's decision on an action in the approvals inbox: approve (optionally with an edited
 // amount), reject, or answer the agent's question. The policy gate re-checks edited amounts.
 
-import { requireOwner } from "@/lib/owner";
+import { ownerRequired } from "@/lib/owner";
+import { JUDGE_ACTOR, callerRole } from "@/lib/judge";
 import { z } from "zod";
 import { store } from "@/lib/db";
 import { ApprovalError, decideAction } from "@/lib/engine";
@@ -18,24 +19,28 @@ const Body = z.discriminatedUnion("decision", [
 ]);
 
 export async function POST(request: Request, ctx: RouteContext<"/api/actions/[id]">) {
-  const denied = requireOwner(request);
-  if (denied) return denied;
+  const role = callerRole(request);
+  if (!role) return ownerRequired();
   const limited = rateLimit(request, "mutate");
   if (limited) return limited;
   const { id } = await ctx.params;
   const parsed = Body.safeParse(await readJson(request));
   if (!parsed.success) return jsonError(400, "Expected { decision: approve | reject | answer }");
   const body = parsed.data;
+  const by = role === "judge" ? JUDGE_ACTOR : "owner (web)";
+  if (role === "judge" && (body.decision === "answer" || (body.decision === "approve" && body.amount !== undefined))) {
+    return jsonError(403, "The judge demo may only approve or reject as proposed.");
+  }
   try {
     const action = await decideAction(
       store(),
       paypal(),
       id,
       body.decision === "approve"
-        ? { kind: "approve", amountCents: body.amount ? toCents(body.amount) : undefined, by: "owner (web)" }
+        ? { kind: "approve", amountCents: body.amount ? toCents(body.amount) : undefined, by }
         : body.decision === "reject"
-          ? { kind: "reject", reason: body.reason, by: "owner (web)" }
-          : { kind: "answer", reply: body.reply, by: "owner (web)" },
+          ? { kind: "reject", reason: body.reason, by }
+          : { kind: "answer", reply: body.reply, by },
     );
     return Response.json({ action });
   } catch (error) {

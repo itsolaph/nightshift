@@ -260,7 +260,7 @@ export type TimelineEvent = {
   incidentId: string | null;
   at: string;
   kind: TimelineKind;
-  actor: "watcher" | "detector" | "agent" | "policy" | "executor" | "paypal" | "owner" | "system" | "lab";
+  actor: "watcher" | "detector" | "agent" | "policy" | "executor" | "paypal" | "owner" | "judge" | "system" | "lab";
   title: string;
   detail: unknown;
 };
